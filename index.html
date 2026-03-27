@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html data-theme="dark" lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataProxy Studio — CVS Health · v3.0</title>
+<style>
+/* ══════════════════════════════════════
+   THEME TOKENS
+══════════════════════════════════════ */
+:root {
+  --bg-base:#080D16;--bg-surface:#0F1623;--bg-raised:#182030;--bg-hover:#1E2940;
+  --border:rgba(255,255,255,0.07);--border-md:rgba(255,255,255,0.12);--border-strong:rgba(255,255,255,0.20);
+  --text-1:#E8EEFF;--text-2:#8892A4;--text-3:#4E5A6E;--text-inv:#080D16;
+  --canvas-bg:#05091200;--canvas-dot:rgba(255,255,255,0.035);
+  --node-bg:#0E1826;--node-shadow:rgba(0,0,0,0.55);--node-border:rgba(255,255,255,0.09);
+  --node-attr-row:rgba(255,255,255,0.015);--node-attr-divider:rgba(255,255,255,0.05);
+  --edge-col:rgba(100,130,180,0.45);--edge-label-bg:rgba(15,22,35,0.9);
+  --teal:#22D3EE;--teal-dim:rgba(34,211,238,0.10);
+  --green:#34D399;--green-dim:rgba(52,211,153,0.10);
+  --amber:#FBBF24;--amber-dim:rgba(251,191,36,0.10);
+  --red:#F87171;--red-dim:rgba(248,113,113,0.10);
+  --purple:#A78BFA;--purple-dim:rgba(167,139,250,0.10);
+  --blue:#60A5FA;--blue-dim:rgba(96,165,250,0.10);
+  --sidebar-w:240px;--topbar-h:52px;
+  --r-sm:6px;--r-md:10px;--r-lg:14px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sans-serif;
+  --mono:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace;
+}
+[data-theme="light"] {
+  --bg-base:#EFF3F9;--bg-surface:#FFFFFF;--bg-raised:#F5F7FB;--bg-hover:#E8EEF8;
+  --border:rgba(0,0,0,0.07);--border-md:rgba(0,0,0,0.12);--border-strong:rgba(0,0,0,0.20);
+  --text-1:#1A2236;--text-2:#4A5870;--text-3:#9AA5B4;--text-inv:#FFFFFF;
+  --canvas-bg:#E4EAF4;--canvas-dot:rgba(0,0,0,0.07);
+  --node-bg:#FFFFFF;--node-shadow:rgba(0,0,40,0.10);--node-border:rgba(0,0,0,0.10);
+  --node-attr-row:rgba(0,0,0,0.02);--node-attr-divider:rgba(0,0,0,0.06);
+  --edge-col:rgba(70,100,160,0.40);--edge-label-bg:rgba(240,244,252,0.95);
+}
+
+/* ══════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--font);background:var(--bg-base);color:var(--text-1);font-size:14px;line-height:1.5;overflow:hidden}
+
+/* ══════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════ */
+.app{display:flex;height:100vh}
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);height:100vh;background:var(--bg-surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{height:var(--topbar-h);background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;z-index:10}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;padding:18px 22px;scroll-behavior:smooth}
+
+/* ══════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════ */
+.sb-logo{padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.logo-row{display:flex;align-items:center;gap:10px}
+.logo-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--teal),#3B82F6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;font-family:var(--mono);flex-shrink:0}
+.logo-name{font-size:13px;font-weight:600;color:var(--text-1);letter-spacing:.02em}
+.logo-env{font-size:10px;color:var(--text-3);letter-spacing:.04em;text-transform:uppercase;margin-top:1px}
+.nav-wrap{padding:8px 6px;flex:1;overflow-y:auto}
+.nav-sec{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);padding:8px 10px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;color:var(--text-2);transition:background .12s,color .12s;margin:1px 0;font-size:13px;user-select:none}
+.nav-item:hover{background:var(--bg-raised);color:var(--text-1)}
+.nav-item.active{background:var(--teal-dim);color:var(--teal)}
+.nav-ic{font-size:14px;width:18px;text-align:center;flex-shrink:0;opacity:.75}
+.nav-item.active .nav-ic{opacity:1}
+.nav-badge{margin-left:auto;background:var(--red);color:#000;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;line-height:16px}
+.sb-footer{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0}
+
+/* ══════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════ */
+.page-title{font-size:14px;font-weight:600;color:var(--text-1);flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:var(--r-sm);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-md);background:transparent;color:var(--text-2);transition:all .12s;font-family:var(--font);white-space:nowrap}
+.btn:hover{background:var(--bg-raised);color:var(--text-1);border-color:var(--border-strong)}
+.btn-primary{background:var(--teal);color:#000;border-color:var(--teal)}
+.btn-primary:hover{filter:brightness(1.08);color:#000}
+.btn-ghost{border-color:transparent;background:transparent}
+.btn-ghost:hover{background:var(--bg-raised)}
+.theme-btn{width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:15px;border:1px solid var(--border-md);background:var(--bg-raised);cursor:pointer;transition:all .15s;flex-shrink:0}
+.theme-btn:hover{border-color:var(--border-strong);background:var(--bg-hover)}
+
+/* ══════════════════════════════════════
+   TABS
+══════════════════════════════════════ */
+.tab-pane{display:none !important}
+.tab-pane.active{display:block !important}
+#tab-cdm.active,#tab-ldm.active{display:flex !important;flex-direction:column;height:calc(100vh - var(--topbar-h) - 36px)}
+
+/* ══════════════════════════════════════
+   GRID & CARDS
+══════════════════════════════════════ */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+.mb{margin-bottom:14px}
+.stack{display:flex;flex-direction:column;gap:6px}
+.card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:15px 17px}
+.card-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3)}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:11px}
+.card-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+.kpi-val{font-size:26px;font-weight:700;color:var(--text-1);font-family:var(--mono);letter-spacing:-.02em;margin:6px 0 2px}
+.kpi-unit{font-size:13px;color:var(--text-2);font-weight:400}
+.kpi-delta{font-size:11px;display:flex;align-items:center;gap:3px}
+.up{color:var(--green)}.dn{color:var(--red)}.nt{color:var(--text-3)}
+.kpi-icon{width:32px;height:32px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.ic-t{background:var(--teal-dim)}.ic-g{background:var(--green-dim)}.ic-a{background:var(--amber-dim)}.ic-r{background:var(--red-dim)}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-g{background:var(--green-dim);color:var(--green)}.b-a{background:var(--amber-dim);color:var(--amber)}
+.b-r{background:var(--red-dim);color:var(--red)}.b-t{background:var(--teal-dim);color:var(--teal)}
+.b-p{background:var(--purple-dim);color:var(--purple)}.b-b{background:var(--blue-dim);color:var(--blue)}
+.tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;background:var(--bg-raised);color:var(--text-2);border:1px solid var(--border)}
+code{font-family:var(--mono);font-size:11px;background:var(--bg-raised);padding:1px 5px;border-radius:3px;color:var(--teal)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);border-bottom:1px solid var(--border)}
+td{padding:7px 10px;color:var(--text-2);border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(127,127,127,0.025)}
+.qbar{height:4px;background:var(--bg-raised);border-radius:2px;overflow:hidden;margin:5px 0 3px}
+.qfill{height:100%;border-radius:2px}.qh{background:var(--green)}.qm{background:var(--amber)}.ql{background:var(--red)}
+.prog{height:5px;background:var(--bg-raised);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px}
+.act-item{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
+.act-item:last-child{border-bottom:none}
+.act-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.act-title{font-size:12px;color:var(--text-1)}
+.act-time{font-size:10px;color:var(--text-3);margin-top:1px}
+.src-logo{width:36px;height:36px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.mrow{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)}
+.mrow:last-child{border-bottom:none}
+.ml{font-size:11px;color:var(--text-3)}.mv{font-size:12px;font-weight:600;color:var(--text-1);font-family:var(--mono)}
+select{background:var(--bg-raised);border:1px solid var(--border-md);color:var(--text-1);padding:6px 10px;border-radius:var(--r-sm);font-size:12px;font-family:var(--font);cursor:pointer;outline:none}
+select:hover{border-color:var(--border-strong)}
+.divider{height:1px;background:var(--border);margin:12px 0}
+.sec-title{font-size:13px;font-weight:600;color:var(--text-1)}
+.sec-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+
+/* ══════════════════════════════════════
+   DIAGRAM WRAPPER
+══════════════════════════════════════ */
+.diagram-tab-content{display:flex;flex-direction:column;gap:0;height:calc(100vh - var(--topbar-h) - 36px)}
+.diagram-toolbar{display:flex;align-items:center;gap:10px;padding:10px 0 10px;flex-wrap:wrap;flex-shrink:0}
+.dtb-info{flex:1;min-width:0}
+.dtb-title{font-size:13px;font-weight:600;color:var(--text-1)}
+.dtb-sub{font-size:11px;color:var(--text-3);margin-top:1px}
+.dtb-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.connect-banner{display:none;align-items:center;gap:10px;padding:8px 14px;background:var(--amber-dim);border:1px solid var(--amber);border-radius:var(--r-sm);font-size:12px;color:var(--amber);margin-bottom:6px;flex-shrink:0}
+.canvas-wrap{flex:1;position:relative;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg-raised);min-height:480px}
+.diagram-svg{width:100%;height:100%;cursor:default;background:
+  radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px);
+  background-size:24px 24px;background-position:12px 12px}
+.diagram-svg.connect-mode{cursor:crosshair}
+
+/* SVG node styles — CSS variables work in inline SVG */
+.node-bg{fill:var(--node-bg);stroke:var(--node-border);stroke-width:1}
+.node-shadow{fill:var(--node-shadow);stroke:none;opacity:.6}
+.node-selected .node-bg{stroke:var(--teal);stroke-width:1.5}
+.node-selected .node-name-text{fill:var(--teal)}
+.node-highlight .node-bg{stroke:var(--amber);stroke-width:2;stroke-dasharray:4,2}
+.attr-divider{stroke:var(--node-attr-divider);stroke-width:.5}
+.header-divider{stroke:var(--node-border);stroke-width:.8}
+.edge-path{stroke:var(--edge-col);fill:none;stroke-width:1.5}
+.edge-label-bg{fill:var(--edge-label-bg)}
+.edge-label-text{fill:var(--text-3);font-size:10px;font-family:var(--font)}
+.card-legend{fill:var(--text-3);font-size:10px;font-family:var(--font)}
+.node-cat-text{font-size:8.5px;font-family:var(--font);letter-spacing:.05em}
+
+/* Zoom controls */
+.zoom-controls{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:4px;z-index:5}
+.zoom-btn{width:28px;height:28px;border-radius:6px;background:var(--bg-surface);border:1px solid var(--border-md);color:var(--text-2);font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;user-select:none;font-weight:600}
+.zoom-btn:hover{background:var(--bg-hover);color:var(--text-1);border-color:var(--border-strong)}
+.zoom-level{width:28px;height:20px;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:var(--mono);color:var(--text-3)}
+
+/* ══════════════════════════════════════
+   MODALS
+══════════════════════════════════════ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg-surface);border:1px solid var(--border-strong);border-radius:var(--r-lg);padding:22px;width:380px;max-width:94vw;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.modal-title{font-size:14px;font-weight:600;color:var(--text-1);margin-bottom:16px}
+.modal-field{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.modal-field label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)}
+.modal-field input,.modal-field textarea,.modal-field select{background:var(--bg-raised);border:1px solid var(--border-md);border-radius:var(--r-sm);color:var(--text-1);padding:8px 10px;font-size:13px;font-family:var(--font);outline:none;width:100%;transition:border-color .12s}
+.modal-field input:focus,.modal-field textarea:focus,.modal-field select:focus{border-color:var(--teal)}
+.modal-field textarea{resize:vertical;min-height:60px}
+.modal-row{display:flex;gap:8px;margin-bottom:13px}
+.modal-row .modal-field{flex:1;margin-bottom:0}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.btn-danger{background:var(--red-dim);color:var(--red);border-color:rgba(248,113,113,.25)}
+.btn-danger:hover{background:rgba(248,113,113,.2);border-color:var(--red)}
+
+/* Context menu */
+.ctx-menu{display:none;position:fixed;z-index:300;background:var(--bg-surface);border:1px solid var(--border-strong);border-radius:var(--r-md);padding:4px;box-shadow:0 8px 32px rgba(0,0,0,.4);min-width:160px}
+.ctx-menu.open{display:block}
+.ctx-item{padding:7px 12px;font-size:12px;color:var(--text-2);cursor:pointer;border-radius:4px;transition:background .1s,color .1s;display:flex;align-items:center;gap:8px}
+.ctx-item:hover{background:var(--bg-raised);color:var(--text-1)}
+.ctx-item.danger{color:var(--red)}
+.ctx-item.danger:hover{background:var(--red-dim)}
+.ctx-sep{height:1px;background:var(--border);margin:3px 0}
+
+/* ══════════════════════════════════════
+   INSTRUCTIONS TAB
+══════════════════════════════════════ */
+.instr-hero{background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(167,139,250,.06));border:1px solid rgba(34,211,238,.15);border-radius:var(--r-lg);padding:22px 24px;margin-bottom:18px}
+.instr-hero h1{font-size:20px;font-weight:700;color:var(--text-1);margin-bottom:6px}
+.instr-hero p{font-size:13px;color:var(--text-2);line-height:1.65}
+.instr-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.instr-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px}
+.instr-card h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--teal);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.instr-card p,.instr-card li{font-size:12px;color:var(--text-2);line-height:1.65}
+.instr-card ul{padding-left:16px;display:flex;flex-direction:column;gap:4px}
+.instr-card li::marker{color:var(--teal)}
+.shortcut{display:inline-block;background:var(--bg-raised);border:1px solid var(--border-md);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:10px;color:var(--text-2)}
+.compare-table{width:100%;border-collapse:collapse}
+.compare-table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;background:var(--bg-raised);color:var(--text-3);border-bottom:1px solid var(--border)}
+.compare-table td{padding:8px 12px;font-size:12px;color:var(--text-2);border-bottom:1px solid var(--border);vertical-align:top}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table .hl{color:var(--teal);font-weight:600}
+
+/* ══════════════════════════════════════
+   SCROLLBAR
+══════════════════════════════════════ */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(127,127,127,0.2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(127,127,127,0.35)}
+
+/* ══════════════════════════════════════
+   FORECAST
+══════════════════════════════════════ */
+.fc-controls{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.fc-field{display:flex;flex-direction:column;gap:3px}
+.fc-field label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ──────────────────── SIDEBAR ──────────────────── -->
+<nav class="sidebar">
+  <div class="sb-logo">
+    <div class="logo-row">
+      <div class="logo-icon">DP</div>
+      <div>
+        <div class="logo-name">DataProxy Studio</div>
+        <div class="logo-env">CVS Health · v3.0</div>
+      </div>
+    </div>
+  </div>
+  <div class="nav-wrap">
+    <div class="nav-sec">Workspace</div>
+    <div class="nav-item active" onclick="gotoTab('overview',this)">
+      <span class="nav-ic">⊞</span>System Overview
+    </div>
+    <div class="nav-item" onclick="gotoTab('cdm',this)">
+      <span class="nav-ic">◈</span>Conceptual Model
+    </div>
+    <div class="nav-item" onclick="gotoTab('ldm',this)">
+      <span class="nav-ic">⊟</span>Logical Model
+    </div>
+    <div class="nav-sec" style="margin-top:4px">Analytics</div>
+    <div class="nav-item" onclick="gotoTab('forecast',this)">
+      <span class="nav-ic">∿</span>Forecast Monitor
+    </div>
+    <div class="nav-item" onclick="gotoTab('sources',this)">
+      <span class="nav-ic">◎</span>Data Sources
+      <span class="nav-badge">1</span>
+    </div>
+    <div class="nav-item" onclick="gotoTab('alerts',this)">
+      <span class="nav-ic">⚠</span>Early Warnings
+      <span class="nav-badge">3</span>
+    </div>
+    <div class="nav-sec" style="margin-top:4px">Help</div>
+    <div class="nav-item" onclick="gotoTab('instructions',this)">
+      <span class="nav-ic">?</span>Getting Started
+    </div>
+  </div>
+  <div class="sb-footer">
+    <div style="font-size:11px;color:var(--text-3)">CVS DataProxy · GDM 2026</div>
+    <div style="font-size:10px;color:var(--text-3);margin-top:2px">Based on WorldQuant Predictive</div>
+  </div>
+</nav>
+
+<!-- ──────────────────── MAIN ──────────────────── -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">System Overview</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <span class="badge b-g" style="gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:var(--green)"></span>All systems</span>
+      <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+    </div>
+  </div>
+
+  <div class="content" id="main-content">
+
+    <!-- ══════════ OVERVIEW ══════════ -->
+    <div class="tab-pane active" id="tab-overview">
+      <div class="g4">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Forecast Accuracy</div><div class="kpi-icon ic-t">◎</div></div>
+          <div class="kpi-val">98.2<span class="kpi-unit">%</span></div>
+          <div class="kpi-delta up">▲ +0.4% vs last cycle</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Active Proxy Sources</div><div class="kpi-icon ic-g">◉</div></div>
+          <div class="kpi-val">5</div>
+          <div class="kpi-delta nt">— All feeds connected</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Open Alerts</div><div class="kpi-icon ic-a">⚠</div></div>
+          <div class="kpi-val">3</div>
+          <div class="kpi-delta dn">▲ +2 since yesterday</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">SKUs Tracked</div><div class="kpi-icon ic-t">⊞</div></div>
+          <div class="kpi-val">4,821</div>
+          <div class="kpi-delta up">▲ +312 this week</div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-head">
+            <div><div class="card-title">Forecast Accuracy Trend</div><div class="card-sub">Weekly — Proxy model vs baseline (historical only)</div></div>
+          </div>
+          <canvas id="accuracyChart" height="155"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Proxy Signal Mix</div><div class="card-sub">Feature weight in active model v3.0</div></div></div>
+          <canvas id="mixChart" height="155"></canvas>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Data Source Health</div><span class="badge b-a">1 degraded</span></div>
+          <table>
+            <thead><tr><th>Source</th><th>Provider</th><th>Refreshed</th><th>Quality</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong style="color:var(--text-1)">Real Estate</strong></td><td>Zillow</td><td><code>2h ago</code></td><td><div class="prog" style="width:70px"><div class="prog-fill" style="width:96%;background:var(--green)"></div></div></td><td><span class="badge b-g">● Active</span></td></tr>
+              <tr><td><strong style="color:var(--text-1)">Infection Rate</strong></td><td>JHU / NYT</td><td><code>6h ago</code></td><td><div class="prog" style="width:70px"><div class="prog-fill" style="width:91%;background:var(--green)"></div></div></td><td><span class="badge b-g">● Active</span></td></tr>
+              <tr><td><strong style="color:var(--text-1)">Employment</strong></td><td>Dept. of Labor</td><td><code>1d ago</code></td><td><div class="prog" style="width:70px"><div class="prog-fill" style="width:88%;background:var(--green)"></div></div></td><td><span class="badge b-g">● Active</span></td></tr>
+              <tr><td><strong style="color:var(--text-1)">News Sentiment</strong></td><td>GDELT</td><td><code>15m ago</code></td><td><div class="prog" style="width:70px"><div class="prog-fill" style="width:74%;background:var(--amber)"></div></div></td><td><span class="badge b-a">⚠ Degraded</span></td></tr>
+              <tr><td><strong style="color:var(--text-1)">Mobility</strong></td><td>Descartes Lab</td><td><code>3h ago</code></td><td><div class="prog" style="width:70px"><div class="prog-fill" style="width:93%;background:var(--green)"></div></div></td><td><span class="badge b-g">● Active</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Recent Activity</div></div>
+          <div>
+            <div class="act-item"><div class="act-dot" style="background:var(--green)"></div><div><div class="act-title">Model v3.0 deployed — 4,821 SKUs updated</div><div class="act-time">Today, 09:14 · Auto-trigger</div></div></div>
+            <div class="act-item"><div class="act-dot" style="background:var(--amber)"></div><div><div class="act-title">GDELT sentiment feed latency spike: 2.4s avg (threshold 2.0s)</div><div class="act-time">Today, 07:32 · Data Quality Alert</div></div></div>
+            <div class="act-item"><div class="act-dot" style="background:var(--teal)"></div><div><div class="act-title">Zillow ZIP-correlation recalculated across 9,847 store catchments</div><div class="act-time">Yesterday, 23:01 · Scheduled Job</div></div></div>
+            <div class="act-item"><div class="act-dot" style="background:var(--red)"></div><div><div class="act-title">Early warning triggered: Hand sanitizer demand surge in 12 markets</div><div class="act-time">Yesterday, 18:45 · Early Warning System</div></div></div>
+            <div class="act-item"><div class="act-dot" style="background:var(--purple)"></div><div><div class="act-title">WQP model retrain complete — accuracy improved +0.4%</div><div class="act-time">2 days ago, 03:00 · WQP Integration</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ CDM TAB ══════════ -->
+    <div class="tab-pane" id="tab-cdm">
+      <div class="diagram-toolbar">
+        <div class="dtb-info">
+          <div class="dtb-title">Conceptual Data Model (CDM)</div>
+          <div class="dtb-sub">Business view — entities &amp; relationships only, no attributes · Drag entities · Scroll to zoom · Double-click to edit</div>
+        </div>
+        <div class="dtb-actions">
+          <button class="btn" onclick="cdmEngine.addEntity()">＋ Entity</button>
+          <button class="btn" id="cdm-connect-btn" onclick="cdmEngine.startConnect()">⟶ Relationship</button>
+          <button class="btn" onclick="cdmEngine.resetLayout()">⟳ Reset</button>
+          <button class="btn btn-primary" onclick="cdmEngine.saveState(true)">💾 Save</button>
+          <button class="btn" onclick="cdmEngine.exportSVG()">↓ SVG</button>
+          <span class="badge b-t" id="cdm-save-status">Auto-saved</span>
+        </div>
+      </div>
+      <div class="connect-banner" id="cdm-connect-banner">
+        <span>🔗</span>
+        <span>Click <strong>source entity</strong>, then <strong>target entity</strong> to create a relationship.</span>
+        <button class="btn btn-ghost" style="margin-left:auto;font-size:11px;padding:3px 8px" onclick="cdmEngine.cancelConnect()">✕ Cancel</button>
+      </div>
+      <div class="canvas-wrap" style="flex:1">
+        <svg id="cdm-svg" class="diagram-svg">
+          <defs>
+            <marker id="arrowhead-cdm" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="var(--edge-col)" opacity="0.8"/>
+            </marker>
+          </defs>
+          <g class="vp" id="cdm-vp"></g>
+        </svg>
+        <div class="zoom-controls">
+          <div class="zoom-btn" onclick="cdmEngine.zoom(1.2)">+</div>
+          <div class="zoom-level" id="cdm-zoom-label">100%</div>
+          <div class="zoom-btn" onclick="cdmEngine.zoom(0.8)">−</div>
+          <div class="zoom-btn" onclick="cdmEngine.fitView()" title="Fit all entities">⊡</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ LDM TAB ══════════ -->
+    <div class="tab-pane" id="tab-ldm">
+      <div class="diagram-toolbar">
+        <div class="dtb-info">
+          <div class="dtb-title">Logical Data Model (LDM)</div>
+          <div class="dtb-sub">Technical view — entities with attributes, data types &amp; keys · 🔑 PK · 🔗 FK · ◆ AK · Drag entities · Scroll to zoom · Double-click to edit</div>
+        </div>
+        <div class="dtb-actions">
+          <button class="btn" onclick="ldmEngine.addEntity()">＋ Entity</button>
+          <button class="btn" id="ldm-connect-btn" onclick="ldmEngine.startConnect()">⟶ Relationship</button>
+          <button class="btn" onclick="ldmEngine.resetLayout()">⟳ Reset</button>
+          <button class="btn btn-primary" onclick="ldmEngine.saveState(true)">💾 Save</button>
+          <button class="btn" onclick="ldmEngine.exportSVG()">↓ SVG</button>
+          <span class="badge b-t" id="ldm-save-status">Auto-saved</span>
+        </div>
+      </div>
+      <div class="connect-banner" id="ldm-connect-banner">
+        <span>🔗</span>
+        <span>Click <strong>source entity</strong>, then <strong>target entity</strong> to create a relationship.</span>
+        <button class="btn btn-ghost" style="margin-left:auto;font-size:11px;padding:3px 8px" onclick="ldmEngine.cancelConnect()">✕ Cancel</button>
+      </div>
+      <div class="canvas-wrap" style="flex:1">
+        <svg id="ldm-svg" class="diagram-svg">
+          <defs>
+            <marker id="arrowhead-ldm" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="var(--edge-col)" opacity="0.8"/>
+            </marker>
+          </defs>
+          <g class="vp" id="ldm-vp"></g>
+        </svg>
+        <div class="zoom-controls">
+          <div class="zoom-btn" onclick="ldmEngine.zoom(1.2)">+</div>
+          <div class="zoom-level" id="ldm-zoom-label">70%</div>
+          <div class="zoom-btn" onclick="ldmEngine.zoom(0.8)">−</div>
+          <div class="zoom-btn" onclick="ldmEngine.fitView()" title="Fit all entities">⊡</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ FORECAST ══════════ -->
+    <div class="tab-pane" id="tab-forecast">
+      <div class="fc-controls">
+        <div class="fc-field">
+          <label>Store / Region</label>
+          <select id="sel-store" onchange="refreshForecast()">
+            <option value="all">All Stores (National Avg)</option>
+            <option value="ny">New York Metro</option>
+            <option value="la">Los Angeles</option>
+            <option value="chicago">Chicago</option>
+            <option value="houston">Houston</option>
+          </select>
+        </div>
+        <div class="fc-field">
+          <label>SKU Category</label>
+          <select id="sel-sku" onchange="refreshForecast()">
+            <option value="san">Hand Sanitizer</option>
+            <option value="msk">Face Masks</option>
+            <option value="vit">Vitamins &amp; Supplements</option>
+            <option value="ppe">PPE &amp; Safety</option>
+            <option value="cln">Cleaning Products</option>
+          </select>
+        </div>
+        <div class="fc-field">
+          <label>Period</label>
+          <select id="sel-period" onchange="refreshForecast()">
+            <option>Mar–Jun 2020</option>
+            <option>Jul–Dec 2020</option>
+            <option selected>Jan–Jun 2021</option>
+          </select>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end">
+          <span class="badge b-g" style="padding:5px 11px">MAPE ±1.8%</span>
+          <span class="badge b-b" style="padding:5px 11px">Model v3.0</span>
+          <span class="badge b-p" style="padding:5px 11px">WQP Engine</span>
+        </div>
+      </div>
+      <div class="card mb">
+        <div class="card-head">
+          <div><div class="card-title">Forecast vs. Actual Demand</div><div class="card-sub" id="fc-label">Hand Sanitizer · All Stores · Jan–Jun 2021</div></div>
+          <div style="display:flex;gap:16px;align-items:center;font-size:11px">
+            <span style="display:flex;align-items:center;gap:5px;color:var(--text-2)"><span style="width:14px;height:2px;background:var(--teal);display:inline-block"></span>Forecast</span>
+            <span style="display:flex;align-items:center;gap:5px;color:var(--text-2)"><span style="width:14px;height:2px;background:var(--green);display:inline-block;opacity:.7"></span>Actual</span>
+          </div>
+        </div>
+        <canvas id="fcChart" height="185"></canvas>
+      </div>
+      <div class="g2">
+        <div class="card"><div class="card-head"><div class="card-title">Proxy Signal Contribution</div><span style="font-size:10px;color:var(--text-3)">% weight in forecast</span></div><canvas id="contribChart" height="170"></canvas></div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">SKU Accuracy Summary</div></div>
+          <table>
+            <thead><tr><th>Category</th><th>MAPE</th><th>n SKUs</th><th>Trend</th></tr></thead>
+            <tbody>
+              <tr><td>Hand Sanitizer</td><td><code style="color:var(--green)">1.8%</code></td><td>847</td><td><span class="up">▼ improving</span></td></tr>
+              <tr><td>Face Masks</td><td><code style="color:var(--green)">2.1%</code></td><td>423</td><td><span class="up">▼ improving</span></td></tr>
+              <tr><td>Vitamins</td><td><code style="color:var(--teal)">1.4%</code></td><td>1,204</td><td><span class="nt">— stable</span></td></tr>
+              <tr><td>PPE &amp; Safety</td><td><code style="color:var(--amber)">3.2%</code></td><td>312</td><td><span class="dn">▲ watch</span></td></tr>
+              <tr><td>Cleaning Products</td><td><code style="color:var(--green)">1.9%</code></td><td>688</td><td><span class="up">▼ improving</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ SOURCES ══════════ -->
+    <div class="tab-pane" id="tab-sources">
+      <div class="card mb" style="display:flex;gap:20px;align-items:center">
+        <div style="flex:1">
+          <div class="sec-title">Alternative Data Sources — Proxy Registry</div>
+          <div class="sec-sub" style="margin-top:3px">5 external feeds ingested continuously · Correlation threshold: accept ≥0.65 · review 0.50–0.64 · drop &lt;0.50</div>
+        </div>
+        <button class="btn btn-primary" style="flex-shrink:0">＋ Register Source</button>
+      </div>
+      <div class="sg" id="src-grid"></div>
+    </div>
+
+    <!-- ══════════ ALERTS ══════════ -->
+    <div class="tab-pane" id="tab-alerts">
+      <div class="g3">
+        <div class="card"><div class="card-head"><div class="card-title">Active Alerts</div><div class="kpi-icon ic-r">⚑</div></div><div class="kpi-val">3</div><div class="kpi-delta dn">2 HIGH · 1 MEDIUM</div></div>
+        <div class="card"><div class="card-head"><div class="card-title">Resolved This Week</div><div class="kpi-icon ic-g">✓</div></div><div class="kpi-val">14</div><div class="kpi-delta up">▼ −3 vs last week</div></div>
+        <div class="card"><div class="card-head"><div class="card-title">Avg Resolution Time</div><div class="kpi-icon ic-a">⏱</div></div><div class="kpi-val">4.2<span class="kpi-unit">h</span></div><div class="kpi-delta up">▼ −0.8h vs last week</div></div>
+      </div>
+      <div class="card mb">
+        <div class="card-head"><div class="card-title">Open Early Warning Alerts</div><div style="display:flex;gap:6px"><span class="badge b-r">2 High</span><span class="badge b-a">1 Medium</span></div></div>
+        <table>
+          <thead><tr><th>Alert ID</th><th>Type</th><th>SKU Category</th><th>Market</th><th>Δ Demand</th><th>Severity</th><th>Triggered</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><code>ALT-2847</code></td><td>Demand Surge</td><td>Hand Sanitizer</td><td>12 metro markets</td><td><span class="up">+38%</span></td><td><span class="badge b-r">HIGH</span></td><td>18:45 yesterday</td><td><button class="btn" style="padding:3px 8px;font-size:10px" onclick="alert('Review: ALT-2847 — Hand sanitizer surge in 12 markets. Proxy signal: GDELT panic index +42, Zillow mobility +18%')">Review</button></td></tr>
+            <tr><td><code>ALT-2846</code></td><td>Stock-Out Risk</td><td>PPE &amp; Safety</td><td>Houston</td><td><span class="up">+21%</span></td><td><span class="badge b-r">HIGH</span></td><td>14:22 yesterday</td><td><button class="btn" style="padding:3px 8px;font-size:10px" onclick="alert('Review: ALT-2846 — PPE stock-out risk in Houston. Infection rate signal rising. Reorder recommended.')">Review</button></td></tr>
+            <tr><td><code>ALT-2843</code></td><td>Signal Anomaly</td><td>All categories</td><td>National</td><td>—</td><td><span class="badge b-a">MEDIUM</span></td><td>2 days ago</td><td><button class="btn" style="padding:3px 8px;font-size:10px" onclick="alert('Review: ALT-2843 — GDELT feed latency above threshold. Quality score dropped 8%. Signal weight reduced from 12% to 8%.')">Review</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card"><div class="card-title" style="margin-bottom:12px">Alert History (last 30 days)</div><canvas id="alertHistChart" height="120"></canvas></div>
+    </div>
+
+    <!-- ══════════ INSTRUCTIONS ══════════ -->
+    <div class="tab-pane" id="tab-instructions">
+      <div class="instr-hero">
+        <h1>👋 Welcome to DataProxy Studio</h1>
+        <p>This tool documents and explores the <strong style="color:var(--teal)">CVS Health Data Proxy System</strong> — the machine learning architecture that let CVS "see around the COVID corner" by replacing unreliable historical sales data with five alternative proxy signals during the pandemic. Use the interactive diagrams to understand the data design, explore forecasts, and monitor proxy source health.</p>
+      </div>
+
+      <div class="instr-grid">
+        <div class="instr-card">
+          <h3>📐 Conceptual Data Model (CDM)</h3>
+          <p style="margin-bottom:8px">The CDM is the <strong>big-picture business view</strong>. It shows <em>what data the business needs</em> — entities and their relationships — without any technical detail. Designed for stakeholders, not engineers.</p>
+          <ul>
+            <li><strong>Drag</strong> any entity to rearrange the layout</li>
+            <li><strong>Scroll</strong> to zoom in/out on the canvas</li>
+            <li><strong>Double-click</strong> an entity to edit its name and description</li>
+            <li>Click <strong>⟶ Relationship</strong> to connect two entities</li>
+            <li>Click <strong>＋ Entity</strong> to add a new business concept</li>
+            <li><span class="shortcut">Right-click</span> an entity for more options</li>
+            <li><span class="shortcut">Del</span> key deletes the selected entity</li>
+            <li>Use <strong>⊡ Fit</strong> to auto-fit all entities on screen</li>
+          </ul>
+        </div>
+        <div class="instr-card">
+          <h3>🗄️ Logical Data Model (LDM)</h3>
+          <p style="margin-bottom:8px">The LDM is the <strong>technical data designer view</strong>. It shows the same entities but with <em>attributes, data types, and key constraints</em> — the structure a developer or data engineer would work from.</p>
+          <ul>
+            <li>Same drag/zoom/edit controls as the CDM</li>
+            <li>Each entity box shows: <strong>🔑 PK</strong> (primary key), <strong>🔗 FK</strong> (foreign key), <strong>◆ AK</strong> (alternate key)</li>
+            <li>Attribute data types are shown on the right of each row</li>
+            <li>Double-click to edit entity name or description</li>
+            <li>Changes auto-save to browser storage — refresh-safe</li>
+          </ul>
+          <div style="margin-top:10px;padding:8px 10px;background:var(--bg-raised);border-radius:6px;font-size:11px;color:var(--text-2)">
+            💡 <strong>Tip:</strong> Use <strong>⟳ Reset</strong> to restore the original default layout at any time.
+          </div>
+        </div>
+
+        <div class="instr-card">
+          <h3>🔄 CDM vs LDM — Key Difference</h3>
+          <table class="compare-table">
+            <thead><tr><th>Aspect</th><th>CDM</th><th>LDM</th></tr></thead>
+            <tbody>
+              <tr><td>Audience</td><td class="hl">Business stakeholders</td><td class="hl">Data designers, engineers</td></tr>
+              <tr><td>Shows attributes?</td><td>No — entities only</td><td>Yes — all attributes with types</td></tr>
+              <tr><td>Shows keys?</td><td>No</td><td>Yes — PK, FK, AK</td></tr>
+              <tr><td>Purpose</td><td>Scope &amp; concept alignment</td><td>Implementation blueprint</td></tr>
+              <tr><td>Level of detail</td><td>High-level, big picture</td><td>Technical, precise</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="instr-card">
+          <h3>🏗️ Entity Categories</h3>
+          <div class="stack" style="gap:7px">
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+              <span style="width:12px;height:12px;border-radius:3px;background:#22D3EE;flex-shrink:0"></span>
+              <div><strong style="color:var(--text-1)">Core Business</strong> — Store, Product/SKU, Sales Transaction, Demand Forecast, Geographic Area</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+              <span style="width:12px;height:12px;border-radius:3px;background:#A78BFA;flex-shrink:0"></span>
+              <div><strong style="color:var(--text-1)">Alternative Data Proxies</strong> — Zillow, JHU/NYT, DoL, GDELT, Descartes Lab signals</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+              <span style="width:12px;height:12px;border-radius:3px;background:#FBBF24;flex-shrink:0"></span>
+              <div><strong style="color:var(--text-1)">Model Layer</strong> — Data Proxy Model (WQP ML engine), Data Source registry</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+              <span style="width:12px;height:12px;border-radius:3px;background:#34D399;flex-shrink:0"></span>
+              <div><strong style="color:var(--text-1)">Governance</strong> — Early Warning Alert, Data Quality Log</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="instr-card">
+          <h3>⌨️ Keyboard Shortcuts</h3>
+          <div class="stack" style="gap:6px;font-size:12px;color:var(--text-2)">
+            <div style="display:flex;justify-content:space-between"><span>Delete selected entity</span><span class="shortcut">Delete</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Cancel connect mode</span><span class="shortcut">Esc</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Pan canvas</span><span class="shortcut">Drag empty area</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Zoom in/out</span><span class="shortcut">Scroll wheel</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Edit entity</span><span class="shortcut">Double-click</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Context menu</span><span class="shortcut">Right-click</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Fit all to view</span><span class="shortcut">⊡ button</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Toggle dark/light</span><span class="shortcut">🌙 top right</span></div>
+          </div>
+        </div>
+
+        <div class="instr-card">
+          <h3>💾 Saving Your Work</h3>
+          <ul>
+            <li>All diagram changes <strong>auto-save</strong> to browser storage after every drag</li>
+            <li>Click <strong>💾 Save</strong> for an explicit confirmed save</li>
+            <li>Changes persist across page refreshes</li>
+            <li>Click <strong>⟳ Reset</strong> to discard all edits and restore defaults</li>
+            <li>Click <strong>↓ SVG</strong> to download the diagram as a vector SVG file</li>
+            <li>Data is stored locally — not sent to any server</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px">📖 About the CVS Health Data Proxy Case</div>
+        <p style="font-size:12px;color:var(--text-2);line-height:1.7;max-width:800px">
+          During COVID-19 (2020–21), CVS Health faced a critical challenge: historical sales data — normally the foundation of demand forecasting — became <strong style="color:var(--text-1)">unreliable</strong> due to panic-buying, stockouts, and rapid behavioural shifts. Their traditional MAPE was 18–20%.
+          <br><br>
+          CVS partnered with <strong style="color:var(--teal)">WorldQuant Predictive (WQP)</strong> to build a Data Proxy Model that replaced historical sales as the primary demand signal with five alternative data sources: Zillow real estate data (r=0.847), JHU/NYT infection rates, Department of Labor employment figures, GDELT news sentiment scores, and Descartes Lab mobility analytics — all anchored to ZIP-code level geographic areas.
+          <br><br>
+          The result: forecast accuracy improved to <strong style="color:var(--teal)">±2% MAPE</strong>, enabling CVS to pre-position inventory, reduce stockouts, and maintain supply chain performance through unprecedented disruption. This system is the subject of this data model reference.
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+</div><!-- /app -->
+
+<!-- ══════════ EDIT MODAL ══════════ -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Edit Entity</div>
+    <div class="modal-field">
+      <label>Entity Name</label>
+      <input type="text" id="edit-entity-name" placeholder="e.g. STORE">
+    </div>
+    <div class="modal-field">
+      <label>Description</label>
+      <textarea id="edit-entity-desc" placeholder="Brief description of this entity…"></textarea>
+    </div>
+    <div class="modal-field">
+      <label>Category</label>
+      <select id="edit-entity-cat">
+        <option value="core">Core Business (Teal)</option>
+        <option value="proxy">Alt. Data Proxy (Purple)</option>
+        <option value="model">Model Layer (Amber)</option>
+        <option value="gov">Governance (Green)</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteCurrentEntity()">🗑 Delete</button>
+      <button class="btn" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmEditModal()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ ADD RELATIONSHIP MODAL ══════════ -->
+<div class="modal-overlay" id="rel-modal">
+  <div class="modal-box">
+    <div class="modal-title">⟶ Add Relationship</div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>From Entity</label>
+        <input type="text" id="rel-from" readonly style="opacity:.7">
+      </div>
+      <div class="modal-field">
+        <label>To Entity</label>
+        <input type="text" id="rel-to" readonly style="opacity:.7">
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Relationship Label</label>
+      <input type="text" id="rel-label" placeholder="e.g. has many, generates, feeds into…">
+    </div>
+    <div class="modal-field">
+      <label>Cardinality</label>
+      <select id="rel-card">
+        <option value="1:N">1 : Many (one-to-many)</option>
+        <option value="N:M">Many : Many</option>
+        <option value="1:1">1 : 1 (one-to-one)</option>
+        <option value="0:N">0 : Many (optional)</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeRelModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmRelModal()">Create Relationship</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CONTEXT MENU ══════════ -->
+<div class="ctx-menu" id="ctx-menu">
+  <div class="ctx-item" data-action="edit" onclick="ctxAction('edit')">✏️ Edit entity</div>
+  <div class="ctx-item" data-action="connect" onclick="ctxAction('connect')">⟶ Connect to…</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" data-action="delete" onclick="ctxAction('delete')">🗑 Delete entity</div>
+</div>
+
+<!-- ══════════ SCRIPTS ══════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════
+//  DIAGRAM DATA — CDM (entities only, no attributes)
+// ══════════════════════════════════════════════════
+const CDM_DEFAULTS = {
+  entities: [
+    { id:'STORE',          name:'STORE',               desc:'CVS pharmacy location (~10,000 US stores). Key join via zip_code.', category:'core',  x:60,  y:130 },
+    { id:'PRODUCT_SKU',    name:'PRODUCT / SKU',        desc:'Stock-keeping unit tracked for demand. Classified by demand_profile.', category:'core',  x:60,  y:320 },
+    { id:'GEO_AREA',       name:'GEOGRAPHIC AREA',      desc:'ZIP-code level anchor for all five proxy signals.', category:'core',  x:320, y:220 },
+    { id:'SALES_TXN',      name:'SALES TRANSACTION',    desc:'Historical store-SKU sales. Became unreliable during COVID panic-buying.', category:'core',  x:320, y:420 },
+    { id:'DEMAND_FC',      name:'DEMAND FORECAST',      desc:'WQP model output: predicted units at store×SKU×date. Achieves ±2% MAPE.', category:'core',  x:600, y:300 },
+    { id:'PROXY_MODEL',    name:'DATA PROXY MODEL',     desc:'ML model config (WorldQuant Predictive). Routes signals by weight & lag.', category:'model', x:880, y:160 },
+    { id:'DATA_SOURCE',    name:'DATA SOURCE',          desc:'External feed registry. correlation_score quantifies predictive value.', category:'model', x:880, y:370 },
+    { id:'RE_SIGNAL',      name:'REAL ESTATE SIGNAL',   desc:'Zillow ZIP-level data. r=0.847. Best proxy: median home price.', category:'proxy', x:1160, y:100 },
+    { id:'INF_SIGNAL',     name:'INFECTION RATE SIGNAL',desc:'JHU / NYT COVID case & positivity rate. 1–3 day demand lead.', category:'proxy', x:1160, y:230 },
+    { id:'EMP_SIGNAL',     name:'EMPLOYMENT SIGNAL',    desc:'Dept. of Labor. Purchasing-power proxy over 4–8 week horizon.', category:'proxy', x:1160, y:360 },
+    { id:'NEWS_SIGNAL',    name:'NEWS SENTIMENT SIGNAL',desc:'GDELT Goldstein scale + panic-buying index. 24–48h lead time.', category:'proxy', x:1160, y:490 },
+    { id:'MOB_SIGNAL',     name:'MOBILITY SIGNAL',      desc:'Descartes Lab foot traffic & WFH index. Shelter-in-place detector.', category:'proxy', x:1160, y:620 },
+    { id:'EW_ALERT',       name:'EARLY WARNING ALERT',  desc:'Triggered when demand surge or signal degradation detected.', category:'gov',   x:600, y:520 },
+    { id:'DQ_LOG',         name:'DATA QUALITY LOG',     desc:'Per-source ingestion quality: completeness, accuracy, timeliness.', category:'gov',   x:880, y:560 },
+  ],
+  rels: [
+    { id:'r1',  from:'GEO_AREA',    to:'STORE',       label:'contains',      card:'1:N' },
+    { id:'r2',  from:'STORE',       to:'SALES_TXN',   label:'records',       card:'1:N' },
+    { id:'r3',  from:'PRODUCT_SKU', to:'SALES_TXN',   label:'sold in',       card:'1:N' },
+    { id:'r4',  from:'STORE',       to:'DEMAND_FC',   label:'forecasted for',card:'1:N' },
+    { id:'r5',  from:'PRODUCT_SKU', to:'DEMAND_FC',   label:'forecasted for',card:'1:N' },
+    { id:'r6',  from:'PROXY_MODEL', to:'DEMAND_FC',   label:'generates',     card:'1:N' },
+    { id:'r7',  from:'DATA_SOURCE', to:'PROXY_MODEL', label:'feeds into',    card:'N:M' },
+    { id:'r8',  from:'GEO_AREA',    to:'RE_SIGNAL',   label:'',              card:'1:N' },
+    { id:'r9',  from:'GEO_AREA',    to:'INF_SIGNAL',  label:'',              card:'1:N' },
+    { id:'r10', from:'GEO_AREA',    to:'EMP_SIGNAL',  label:'',              card:'1:N' },
+    { id:'r11', from:'GEO_AREA',    to:'NEWS_SIGNAL', label:'',              card:'1:N' },
+    { id:'r12', from:'GEO_AREA',    to:'MOB_SIGNAL',  label:'',              card:'1:N' },
+    { id:'r13', from:'PROXY_MODEL', to:'EW_ALERT',    label:'triggers',      card:'1:N' },
+    { id:'r14', from:'DATA_SOURCE', to:'DQ_LOG',      label:'monitored by',  card:'1:N' },
+    { id:'r15', from:'GEO_AREA',    to:'DEMAND_FC',   label:'contextualises',card:'1:N' },
+  ]
+};
+
+// ══════════════════════════════════════════════════
+//  DIAGRAM DATA — LDM (with full attributes)
+// ══════════════════════════════════════════════════
+const LDM_DEFAULTS = {
+  entities: [
+    { id:'STORE', name:'STORE', desc:'CVS pharmacy location. zip_code is key join for all proxy signals.', category:'core', x:40, y:60,
+      attrs:[
+        {name:'store_id',      type:'INT',          key:'PK'},
+        {name:'store_code',    type:'VARCHAR(12)',   key:'AK'},
+        {name:'store_name',    type:'VARCHAR(100)',  key:''},
+        {name:'zip_code',      type:'VARCHAR(10)',   key:'FK'},
+        {name:'state',         type:'CHAR(2)',       key:''},
+        {name:'region',        type:'VARCHAR(50)',   key:''},
+        {name:'store_type',    type:'ENUM',          key:''},
+        {name:'is_active',     type:'BOOLEAN',       key:''},
+      ]},
+    { id:'PRODUCT_SKU', name:'PRODUCT / SKU', desc:'SKU-level inventory item. demand_profile classifies COVID sensitivity.', category:'core', x:40, y:360,
+      attrs:[
+        {name:'sku_id',         type:'INT',          key:'PK'},
+        {name:'sku_code',       type:'VARCHAR(20)',  key:'AK'},
+        {name:'sku_name',       type:'VARCHAR(200)', key:''},
+        {name:'category',       type:'VARCHAR(80)',  key:''},
+        {name:'baseline_demand',type:'DECIMAL(10,2)',key:''},
+        {name:'demand_profile', type:'ENUM',         key:''},
+        {name:'unit_cost',      type:'DECIMAL(8,2)', key:''},
+        {name:'is_tracked',     type:'BOOLEAN',      key:''},
+      ]},
+    { id:'GEO_AREA', name:'GEOGRAPHIC AREA', desc:'ZIP-code anchor for all five proxy signals. Central integration point.', category:'core', x:320, y:200,
+      attrs:[
+        {name:'area_id',         type:'INT',          key:'PK'},
+        {name:'zip_code',        type:'VARCHAR(10)',  key:'AK'},
+        {name:'city',            type:'VARCHAR(100)', key:''},
+        {name:'county',          type:'VARCHAR(100)', key:''},
+        {name:'state_code',      type:'CHAR(2)',       key:''},
+        {name:'region',          type:'VARCHAR(50)',  key:''},
+        {name:'latitude',        type:'DECIMAL(9,6)', key:''},
+        {name:'longitude',       type:'DECIMAL(9,6)', key:''},
+        {name:'population',      type:'INT',          key:''},
+      ]},
+    { id:'SALES_TXN', name:'SALES TRANSACTION', desc:'Historical store-SKU-date sales. stock_out_flag = demand amplifier signal.', category:'core', x:320, y:550,
+      attrs:[
+        {name:'txn_id',      type:'INT',          key:'PK'},
+        {name:'store_id',    type:'INT',          key:'FK'},
+        {name:'sku_id',      type:'INT',          key:'FK'},
+        {name:'txn_date',    type:'DATE',         key:''},
+        {name:'units_sold',  type:'INT',          key:''},
+        {name:'revenue_usd', type:'DECIMAL(10,2)',key:''},
+        {name:'channel',     type:'ENUM',         key:''},
+        {name:'stock_out_flag',type:'BOOLEAN',    key:''},
+      ]},
+    { id:'DEMAND_FC', name:'DEMAND FORECAST', desc:'WQP model output at store×SKU×date. accuracy_pct filled post-period.', category:'core', x:620, y:380,
+      attrs:[
+        {name:'forecast_id',    type:'INT',          key:'PK'},
+        {name:'store_id',       type:'INT',          key:'FK'},
+        {name:'sku_id',         type:'INT',          key:'FK'},
+        {name:'model_id',       type:'INT',          key:'FK'},
+        {name:'area_id',        type:'INT',          key:'FK'},
+        {name:'forecast_date',  type:'DATE',         key:''},
+        {name:'predicted_units',type:'INT',          key:''},
+        {name:'lower_bound',    type:'INT',          key:''},
+        {name:'upper_bound',    type:'INT',          key:''},
+        {name:'confidence_pct', type:'DECIMAL(5,2)', key:''},
+        {name:'actual_units',   type:'INT',          key:''},
+        {name:'accuracy_pct',   type:'DECIMAL(5,2)', key:''},
+      ]},
+    { id:'PROXY_MODEL', name:'DATA PROXY MODEL', desc:'ML model version registry. WorldQuant Predictive (WQP) engine.', category:'model', x:940, y:80,
+      attrs:[
+        {name:'model_id',        type:'INT',          key:'PK'},
+        {name:'model_code',      type:'VARCHAR(20)',  key:'AK'},
+        {name:'model_name',      type:'VARCHAR(200)', key:''},
+        {name:'model_version',   type:'VARCHAR(20)',  key:''},
+        {name:'algorithm_type',  type:'VARCHAR(50)',  key:''},
+        {name:'baseline_acc_pct',type:'DECIMAL(5,2)', key:''},
+        {name:'proxy_acc_pct',   type:'DECIMAL(5,2)', key:''},
+        {name:'status',          type:'ENUM',         key:''},
+        {name:'created_at',      type:'TIMESTAMP',    key:''},
+      ]},
+    { id:'DATA_SOURCE', name:'DATA SOURCE', desc:'External feed registry. correlation_score = Pearson r vs actual demand.', category:'model', x:940, y:420,
+      attrs:[
+        {name:'source_id',        type:'INT',          key:'PK'},
+        {name:'source_code',      type:'VARCHAR(20)',  key:'AK'},
+        {name:'source_name',      type:'VARCHAR(100)', key:''},
+        {name:'provider_name',    type:'VARCHAR(100)', key:''},
+        {name:'data_category',    type:'VARCHAR(50)',  key:''},
+        {name:'refresh_frequency',type:'VARCHAR(30)',  key:''},
+        {name:'correlation_score',type:'DECIMAL(5,3)', key:''},
+        {name:'status',           type:'ENUM',         key:''},
+      ]},
+    { id:'RE_SIGNAL', name:'REAL ESTATE SIGNAL', desc:'Zillow ZIP-level. median_home_price: correlation r=0.847.', category:'proxy', x:1230, y:40,
+      attrs:[
+        {name:'re_signal_id',       type:'INT',           key:'PK'},
+        {name:'source_id',          type:'INT',           key:'FK'},
+        {name:'area_id',            type:'INT',           key:'FK'},
+        {name:'observation_date',   type:'DATE',          key:''},
+        {name:'median_home_price',  type:'DECIMAL(15,2)', key:''},
+        {name:'price_change_pct',   type:'DECIMAL(6,2)',  key:''},
+        {name:'days_on_market',     type:'DECIMAL(5,1)',  key:''},
+        {name:'mobility_index',     type:'DECIMAL(6,3)',  key:''},
+      ]},
+    { id:'INF_SIGNAL', name:'INFECTION RATE SIGNAL', desc:'JHU/NYT/CDC. positivity_rate_pct: strongest 1–3d demand lead.', category:'proxy', x:1230, y:310,
+      attrs:[
+        {name:'inf_signal_id',    type:'INT',          key:'PK'},
+        {name:'source_id',        type:'INT',          key:'FK'},
+        {name:'area_id',          type:'INT',          key:'FK'},
+        {name:'observation_date', type:'DATE',         key:''},
+        {name:'new_cases_7d_avg', type:'DECIMAL(10,2)',key:''},
+        {name:'positivity_rate',  type:'DECIMAL(5,2)', key:''},
+        {name:'hosp_rate',        type:'DECIMAL(5,2)', key:''},
+        {name:'variant_dominant', type:'VARCHAR(50)',  key:''},
+        {name:'data_source_org',  type:'VARCHAR(50)',  key:''},
+      ]},
+    { id:'EMP_SIGNAL', name:'EMPLOYMENT SIGNAL', desc:'Dept. of Labor. Purchasing-power proxy, 4–8 week horizon.', category:'proxy', x:1230, y:620,
+      attrs:[
+        {name:'emp_signal_id',     type:'INT',          key:'PK'},
+        {name:'source_id',         type:'INT',          key:'FK'},
+        {name:'area_id',           type:'INT',          key:'FK'},
+        {name:'observation_date',  type:'DATE',         key:''},
+        {name:'unemployment_rate', type:'DECIMAL(5,2)', key:''},
+        {name:'initial_claims',    type:'INT',          key:''},
+        {name:'continued_claims',  type:'INT',          key:''},
+        {name:'sector',            type:'VARCHAR(50)',  key:''},
+      ]},
+    { id:'NEWS_SIGNAL', name:'NEWS SENTIMENT SIGNAL', desc:'GDELT. panic_buying_index: 24–48h demand surge lead.', category:'proxy', x:1230, y:890,
+      attrs:[
+        {name:'news_signal_id',   type:'INT',          key:'PK'},
+        {name:'source_id',        type:'INT',          key:'FK'},
+        {name:'area_id',          type:'INT',          key:'FK'},
+        {name:'observation_date', type:'DATE',         key:''},
+        {name:'goldstein_score',  type:'DECIMAL(5,2)', key:''},
+        {name:'avg_sentiment',    type:'DECIMAL(5,3)', key:''},
+        {name:'panic_buying_idx', type:'DECIMAL(5,2)', key:''},
+        {name:'supply_concern',   type:'DECIMAL(5,2)', key:''},
+      ]},
+    { id:'MOB_SIGNAL', name:'MOBILITY SIGNAL', desc:'Descartes Lab. wfh_index tracks structural work-from-home shift.', category:'proxy', x:1230, y:1140,
+      attrs:[
+        {name:'mob_signal_id',     type:'INT',          key:'PK'},
+        {name:'source_id',         type:'INT',          key:'FK'},
+        {name:'area_id',           type:'INT',          key:'FK'},
+        {name:'observation_date',  type:'DATE',         key:''},
+        {name:'foot_traffic_idx',  type:'DECIMAL(6,2)', key:''},
+        {name:'wfh_index',         type:'DECIMAL(5,2)', key:''},
+        {name:'pharmacy_visit_pct',type:'DECIMAL(6,2)', key:''},
+        {name:'mobility_trend',    type:'VARCHAR(20)',  key:''},
+      ]},
+    { id:'EW_ALERT', name:'EARLY WARNING ALERT', desc:'Demand surge or signal degradation alert. Optional store/SKU/area scope.', category:'gov', x:620, y:680,
+      attrs:[
+        {name:'alert_id',       type:'INT',           key:'PK'},
+        {name:'model_id',       type:'INT',           key:'FK'},
+        {name:'store_id',       type:'INT',           key:'FK'},
+        {name:'sku_id',         type:'INT',           key:'FK'},
+        {name:'area_id',        type:'INT',           key:'FK'},
+        {name:'alert_type',     type:'VARCHAR(50)',   key:''},
+        {name:'severity',       type:'ENUM',          key:''},
+        {name:'trigger_metric', type:'VARCHAR(100)',  key:''},
+        {name:'trigger_value',  type:'DECIMAL(15,4)', key:''},
+        {name:'is_acknowledged',type:'BOOLEAN',       key:''},
+        {name:'created_at',     type:'TIMESTAMP',     key:''},
+      ]},
+    { id:'DQ_LOG', name:'DATA QUALITY LOG', desc:'Quality score per source ingestion run. Drives alert escalation.', category:'gov', x:940, y:720,
+      attrs:[
+        {name:'log_id',               type:'INT',          key:'PK'},
+        {name:'source_id',            type:'INT',          key:'FK'},
+        {name:'check_date',           type:'TIMESTAMP',    key:''},
+        {name:'completeness_pct',     type:'DECIMAL(5,2)', key:''},
+        {name:'accuracy_score',       type:'DECIMAL(5,2)', key:''},
+        {name:'timeliness_score',     type:'DECIMAL(5,2)', key:''},
+        {name:'overall_quality_score',type:'DECIMAL(5,2)', key:''},
+        {name:'check_status',         type:'ENUM',         key:''},
+      ]},
+  ],
+  rels: [
+    { id:'r1',  from:'GEO_AREA',    to:'STORE',       label:'contains',      card:'1:N' },
+    { id:'r2',  from:'STORE',       to:'SALES_TXN',   label:'records',       card:'1:N' },
+    { id:'r3',  from:'PRODUCT_SKU', to:'SALES_TXN',   label:'sold in',       card:'1:N' },
+    { id:'r4',  from:'STORE',       to:'DEMAND_FC',   label:'forecasted for',card:'1:N' },
+    { id:'r5',  from:'PRODUCT_SKU', to:'DEMAND_FC',   label:'forecasted for',card:'1:N' },
+    { id:'r6',  from:'PROXY_MODEL', to:'DEMAND_FC',   label:'generates',     card:'1:N' },
+    { id:'r7',  from:'DATA_SOURCE', to:'PROXY_MODEL', label:'feeds into',    card:'N:M' },
+    { id:'r8',  from:'GEO_AREA',    to:'RE_SIGNAL',   label:'',              card:'1:N' },
+    { id:'r9',  from:'GEO_AREA',    to:'INF_SIGNAL',  label:'',              card:'1:N' },
+    { id:'r10', from:'GEO_AREA',    to:'EMP_SIGNAL',  label:'',              card:'1:N' },
+    { id:'r11', from:'GEO_AREA',    to:'NEWS_SIGNAL', label:'',              card:'1:N' },
+    { id:'r12', from:'GEO_AREA',    to:'MOB_SIGNAL',  label:'',              card:'1:N' },
+    { id:'r13', from:'PROXY_MODEL', to:'EW_ALERT',    label:'triggers',      card:'1:N' },
+    { id:'r14', from:'DATA_SOURCE', to:'DQ_LOG',      label:'monitored by',  card:'1:N' },
+    { id:'r15', from:'GEO_AREA',    to:'DEMAND_FC',   label:'contextualises',card:'1:N' },
+  ]
+};
+
+// ══════════════════════════════════════════════════
+//  HELPER
+// ══════════════════════════════════════════════════
+function mkSVG(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+  return el;
+}
+
+function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+// ══════════════════════════════════════════════════
+//  DIAGRAM ENGINE CLASS
+// ══════════════════════════════════════════════════
+const CAT_COLORS = { core:'#22D3EE', proxy:'#A78BFA', model:'#FBBF24', gov:'#34D399' };
+const CDM_NODE_W = 162, CDM_NODE_H = 58;
+const LDM_NODE_W = 218, LDM_HEADER_H = 38, LDM_ROW_H = 23, LDM_FOOTER_PAD = 8;
+
+class DiagramEngine {
+  constructor(svgId, vpId, type, defaults, initScale=1) {
+    this.svg    = document.getElementById(svgId);
+    this.vpEl   = document.getElementById(vpId);
+    this.type   = type;
+    this.defaults = defaults;
+    this.vp     = { x: 30, y: 30, scale: initScale };
+    this.entities = [];
+    this.rels   = [];
+    this.selectedId   = null;
+    this.dragState    = null;
+    this.panState     = null;
+    this.connectMode  = { active: false, fromId: null };
+    this._editId      = null;
+    this._relPending  = null;
+    this.arrowId      = `arrowhead-${type}`;
+
+    this.loadState();
+    this._setupEvents();
+    this.render();
+    this._updateZoomLabel();
+  }
+
+  // ── GEOMETRY ──────────────────────────────
+  nodeW(ent) { return this.type==='cdm' ? CDM_NODE_W : LDM_NODE_W; }
+  nodeH(ent) {
+    if (this.type==='cdm') return CDM_NODE_H;
+    const n = ent.attrs ? ent.attrs.length : 0;
+    return LDM_HEADER_H + n*LDM_ROW_H + LDM_FOOTER_PAD;
+  }
+  nodeCenter(ent) { return { x: ent.x + this.nodeW(ent)/2, y: ent.y + this.nodeH(ent)/2 }; }
+
+  closestEdgePt(ent, targetPt) {
+    const w = this.nodeW(ent), h = this.nodeH(ent);
+    const cx = ent.x + w/2, cy = ent.y + h/2;
+    const dx = targetPt.x - cx, dy = targetPt.y - cy;
+    const mx = Math.abs(dx), my = Math.abs(dy);
+    if (w * my > h * mx) {
+      // top or bottom
+      return dy > 0 ? {x: cx, y: ent.y+h, dir:'b'} : {x: cx, y: ent.y, dir:'t'};
+    } else {
+      // left or right
+      return dx > 0 ? {x: ent.x+w, y: cy, dir:'r'} : {x: ent.x, y: cy, dir:'l'};
+    }
+  }
+
+  pathBetween(fe, te) {
+    const fc = this.nodeCenter(fe), tc = this.nodeCenter(te);
+    const fp = this.closestEdgePt(fe, tc);
+    const tp = this.closestEdgePt(te, fc);
+    const mx = (fp.x+tp.x)/2, my = (fp.y+tp.y)/2;
+    let cpx1,cpy1,cpx2,cpy2;
+    if ((fp.dir==='t'||fp.dir==='b') && (tp.dir==='t'||tp.dir==='b')) {
+      cpx1=fp.x; cpy1=my; cpx2=tp.x; cpy2=my;
+    } else if ((fp.dir==='l'||fp.dir==='r') && (tp.dir==='l'||tp.dir==='r')) {
+      cpx1=mx; cpy1=fp.y; cpx2=mx; cpy2=tp.y;
+    } else {
+      cpx1=mx; cpy1=fp.y; cpx2=mx; cpy2=tp.y;
+    }
+    const d = `M ${fp.x.toFixed(1)} ${fp.y.toFixed(1)} C ${cpx1.toFixed(1)} ${cpy1.toFixed(1)}, ${cpx2.toFixed(1)} ${cpy2.toFixed(1)}, ${tp.x.toFixed(1)} ${tp.y.toFixed(1)}`;
+    // "away from entity" tangent at each endpoint:
+    //   source fp → toward cp1 (outward into canvas)
+    //   target tp → toward cp2 (outward back into canvas)
+    return { d, fp, tp, fAway:{x:cpx1-fp.x, y:cpy1-fp.y}, tAway:{x:cpx2-tp.x, y:cpy2-tp.y} };
+  }
+
+  // Parse cardinality string into {fromType, toType} for ER notation
+  _parseCard(card) {
+    const MAP = {
+      '1:N':  {f:'one-only',  t:'one-many'},
+      'N:M':  {f:'zero-many', t:'zero-many'},
+      '1:1':  {f:'one-only',  t:'one-only'},
+      '0:N':  {f:'zero-one',  t:'zero-many'},
+      '0:1':  {f:'zero-one',  t:'zero-one'},
+    };
+    return MAP[card] || {f:'one-only', t:'one-many'};
+  }
+
+  // Draw ER crow's foot / bar notation at a point
+  // x,y = entity boundary contact point
+  // awayDx,awayDy = direction AWAY from entity into open canvas (unnormalized OK)
+  // type = 'one-only' | 'one-many' | 'zero-many' | 'zero-one' | 'many' | 'one'
+  _drawERMarker(g, x, y, awayDx, awayDy, type) {
+    const S = 8; // bar half-length
+    const len = Math.sqrt(awayDx*awayDx + awayDy*awayDy);
+    if (len < 0.001) return;
+    const ax = awayDx/len, ay = awayDy/len; // unit away direction
+    const px = -ay, py =  ax;               // perpendicular
+    const col = 'var(--edge-col)';
+    const sw  = '1.8';
+    const attrs = {stroke:col, 'stroke-width':sw, fill:'none', 'stroke-linecap':'round'};
+
+    // perpendicular bar at distance d from contact
+    const bar = d => {
+      const bx = x+ax*d, by = y+ay*d;
+      g.appendChild(mkSVG('line',{x1:bx-px*S, y1:by-py*S, x2:bx+px*S, y2:by+py*S, ...attrs}));
+    };
+
+    // crow's foot: 3 lines — centre tip at d1, spread tips at d1 angled, all meeting base at d2
+    const crows = (d1, d2) => {
+      const bx = x+ax*d2, by = y+ay*d2;
+      // centre line
+      g.appendChild(mkSVG('line',{x1:x+ax*d1,        y1:y+ay*d1,        x2:bx, y2:by, ...attrs}));
+      // left spread
+      g.appendChild(mkSVG('line',{x1:x+ax*d1*0.35+px*S, y1:y+ay*d1*0.35+py*S, x2:bx, y2:by, ...attrs}));
+      // right spread
+      g.appendChild(mkSVG('line',{x1:x+ax*d1*0.35-px*S, y1:y+ay*d1*0.35-py*S, x2:bx, y2:by, ...attrs}));
+    };
+
+    // small circle at distance d (open = optional)
+    const circle = d => {
+      const r = 4;
+      g.appendChild(mkSVG('circle',{cx:x+ax*d, cy:y+ay*d, r, stroke:col, 'stroke-width':sw, fill:'var(--node-bg)'}));
+    };
+
+    if      (type==='one-only')  { bar(5); bar(11); }
+    else if (type==='one')       { bar(5); }
+    else if (type==='many')      { crows(2, 10); }
+    else if (type==='one-many')  { bar(13); crows(2, 10); }
+    else if (type==='zero-one')  { circle(14); bar(5); }
+    else if (type==='zero-many') { circle(16); crows(2, 10); }
+  }
+
+  clientToVP(cx, cy) {
+    const r = this.svg.getBoundingClientRect();
+    return {
+      x: (cx - r.left - this.vp.x) / this.vp.scale,
+      y: (cy - r.top  - this.vp.y) / this.vp.scale,
+    };
+  }
+
+  hitEntity(vpX, vpY) {
+    for (let i = this.entities.length-1; i >= 0; i--) {
+      const e = this.entities[i];
+      if (vpX >= e.x && vpX <= e.x+this.nodeW(e) && vpY >= e.y && vpY <= e.y+this.nodeH(e)) return e.id;
+    }
+    return null;
+  }
+
+  // ── RENDER ──────────────────────────────
+  render() {
+    this.vpEl.innerHTML = '';
+
+    // --- Edges ---
+    const relG = mkSVG('g', { class:'rels' });
+    for (const r of this.rels) {
+      const fe = this.entities.find(e=>e.id===r.from);
+      const te = this.entities.find(e=>e.id===r.to);
+      if (!fe||!te) continue;
+      const pd = this.pathBetween(fe,te);
+
+      // Draw the line (no arrowhead marker — ER notation handles direction)
+      const path = mkSVG('path', { d:pd.d, class:'edge-path' });
+      relG.appendChild(path);
+
+      // ER end markers
+      const {f:fromType, t:toType} = this._parseCard(r.card||'1:N');
+      this._drawERMarker(relG, pd.fp.x, pd.fp.y,  pd.fAway.x,  pd.fAway.y, fromType);
+      this._drawERMarker(relG, pd.tp.x, pd.tp.y,  pd.tAway.x,  pd.tAway.y, toType);
+
+      // Relationship label at midpoint
+      if (r.label) {
+        const fc = this.nodeCenter(fe), tc = this.nodeCenter(te);
+        const lx = (fc.x+tc.x)/2, ly = (fc.y+tc.y)/2;
+        const bg = mkSVG('rect',{ x:lx-28, y:ly-8, width:56, height:14, rx:3, class:'edge-label-bg' });
+        const lt = mkSVG('text',{ x:lx, y:ly+1.5, class:'edge-label-text', 'text-anchor':'middle', 'dominant-baseline':'middle' });
+        lt.textContent = r.label.length>12 ? r.label.slice(0,11)+'…' : r.label;
+        relG.appendChild(bg);
+        relG.appendChild(lt);
+      }
+    }
+    this.vpEl.appendChild(relG);
+
+    // --- Entities ---
+    for (const ent of this.entities) {
+      this.type==='cdm' ? this._renderCDMNode(ent) : this._renderLDMNode(ent);
+    }
+
+    this._applyVP();
+  }
+
+  _renderCDMNode(ent) {
+    const w=CDM_NODE_W, h=CDM_NODE_H;
+    const col = CAT_COLORS[ent.category]||'#8892A4';
+    const g = mkSVG('g',{ class:'entity-node'+(this.selectedId===ent.id?' node-selected':'')+(this.connectMode.fromId===ent.id?' node-highlight':''), 'data-id':ent.id });
+
+    g.appendChild(mkSVG('rect',{ x:ent.x+3, y:ent.y+4, width:w, height:h, rx:7, class:'node-shadow' }));
+    g.appendChild(mkSVG('rect',{ x:ent.x, y:ent.y, width:w, height:h, rx:6, class:'node-bg' }));
+
+    // Top color stripe
+    const stripeClip = mkSVG('clipPath',{ id:`clip-cdm-${ent.id}` });
+    stripeClip.appendChild(mkSVG('rect',{ x:ent.x, y:ent.y, width:w, height:7, rx:6 }));
+    g.appendChild(stripeClip);
+    const stripe = mkSVG('rect',{ x:ent.x, y:ent.y, width:w, height:7, fill:col, opacity:'0.9', 'clip-path':`url(#clip-cdm-${ent.id})` });
+    g.appendChild(stripe);
+
+    // Entity name — may need wrapping for long names
+    const nameLines = this._splitName(ent.name, 20);
+    const nameY0 = ent.y + h/2 + (nameLines.length===1 ? 3 : -3);
+    nameLines.forEach((line, i) => {
+      const nt = mkSVG('text',{ x:ent.x+w/2, y:nameY0 + i*14, class:'node-name-text', 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':'11', 'font-weight':'600', 'font-family':'inherit', fill:col });
+      nt.textContent = line;
+      g.appendChild(nt);
+    });
+
+    // Category label bottom
+    const cat = mkSVG('text',{ x:ent.x+w/2, y:ent.y+h-7, class:'node-cat-text', 'text-anchor':'middle', fill:col, opacity:'0.45' });
+    cat.textContent = ent.category.toUpperCase();
+    g.appendChild(cat);
+
+    this.vpEl.appendChild(g);
+  }
+
+  _renderLDMNode(ent) {
+    const w=LDM_NODE_W, hH=LDM_HEADER_H, rH=LDM_ROW_H;
+    const attrs = ent.attrs||[];
+    const h = hH + attrs.length*rH + LDM_FOOTER_PAD;
+    const col = CAT_COLORS[ent.category]||'#8892A4';
+    const g = mkSVG('g',{ class:'entity-node'+(this.selectedId===ent.id?' node-selected':'')+(this.connectMode.fromId===ent.id?' node-highlight':''), 'data-id':ent.id });
+
+    g.appendChild(mkSVG('rect',{ x:ent.x+3, y:ent.y+4, width:w, height:h, rx:6, class:'node-shadow' }));
+    g.appendChild(mkSVG('rect',{ x:ent.x, y:ent.y, width:w, height:h, rx:5, class:'node-bg' }));
+
+    // Left accent bar
+    g.appendChild(mkSVG('rect',{ x:ent.x, y:ent.y, width:3, height:h, rx:0, fill:col, opacity:'0.9' }));
+    // Top corners need rx clipping — approximate with a solid top rect
+    g.appendChild(mkSVG('rect',{ x:ent.x, y:ent.y, width:3, height:5, fill:col, opacity:'0.9' }));
+
+    // Header bg
+    g.appendChild(mkSVG('rect',{ x:ent.x+3, y:ent.y, width:w-3, height:hH, rx:0, fill:col, opacity:'0.12' }));
+
+    // Entity name in header
+    const nameLines = this._splitName(ent.name, 22);
+    const nameY0 = ent.y + hH/2 + (nameLines.length===1 ? 0 : -6);
+    nameLines.forEach((line, i) => {
+      const nt = mkSVG('text',{ x:ent.x+14, y:nameY0+i*13, 'text-anchor':'start', 'dominant-baseline':'middle', 'font-size':'11', 'font-weight':'700', 'font-family':'inherit', fill:col });
+      nt.textContent = line;
+      g.appendChild(nt);
+    });
+
+    // Header divider
+    g.appendChild(mkSVG('line',{ x1:ent.x+3, y1:ent.y+hH, x2:ent.x+w, y2:ent.y+hH, class:'header-divider' }));
+
+    // Attributes
+    attrs.forEach((attr, i) => {
+      const ay = ent.y + hH + i*rH;
+      // Alt row bg
+      if (i%2===1) g.appendChild(mkSVG('rect',{ x:ent.x+3, y:ay, width:w-3, height:rH, fill:'rgba(127,127,127,0.03)', stroke:'none' }));
+      // Row divider
+      if (i>0) g.appendChild(mkSVG('line',{ x1:ent.x+3, y1:ay, x2:ent.x+w, y2:ay, class:'attr-divider' }));
+
+      const keyColor = attr.key==='PK' ? '#FBBF24' : attr.key==='FK' ? '#60A5FA' : attr.key==='AK' ? '#34D399' : null;
+      const textX = ent.x + (attr.key ? 22 : 10);
+      const textY = ay + rH/2 + 1;
+
+      // Key icon
+      if (attr.key==='PK') {
+        const ki = mkSVG('text',{ x:ent.x+12, y:textY, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':'9' });
+        ki.textContent = '🔑'; g.appendChild(ki);
+      } else if (attr.key==='FK') {
+        const ki = mkSVG('text',{ x:ent.x+12, y:textY, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':'9' });
+        ki.textContent = '🔗'; g.appendChild(ki);
+      } else if (attr.key==='AK') {
+        const ki = mkSVG('text',{ x:ent.x+12, y:textY, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':'9' });
+        ki.textContent = '◆'; g.appendChild(ki);
+      }
+
+      const an = mkSVG('text',{ x:textX, y:textY, 'text-anchor':'start', 'dominant-baseline':'middle', 'font-size':'10.5', 'font-family':'inherit', fill: keyColor||'var(--text-2)' });
+      an.textContent = attr.name;
+      g.appendChild(an);
+
+      const at = mkSVG('text',{ x:ent.x+w-7, y:textY, 'text-anchor':'end', 'dominant-baseline':'middle', 'font-size':'9.5', 'font-family':'monospace', fill:'var(--text-3)' });
+      at.textContent = attr.type;
+      g.appendChild(at);
+    });
+
+    this.vpEl.appendChild(g);
+  }
+
+  _splitName(name, maxLen) {
+    if (name.length <= maxLen) return [name];
+    const words = name.split(' ');
+    const lines = []; let cur = '';
+    for (const w of words) {
+      if (cur && (cur+' '+w).length > maxLen) { lines.push(cur); cur=w; }
+      else { cur = cur ? cur+' '+w : w; }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  _applyVP() {
+    this.vpEl.setAttribute('transform', `translate(${this.vp.x.toFixed(1)},${this.vp.y.toFixed(1)}) scale(${this.vp.scale.toFixed(4)})`);
+  }
+
+  _updateZoomLabel() {
+    const el = document.getElementById(`${this.type}-zoom-label`);
+    if (el) el.textContent = Math.round(this.vp.scale*100)+'%';
+  }
+
+  // ── EVENTS ──────────────────────────────
+  _setupEvents() {
+    this.svg.addEventListener('mousedown', e => this._onMD(e));
+    this.svg.addEventListener('mousemove', e => this._onMM(e));
+    this.svg.addEventListener('mouseup',   e => this._onMU(e));
+    this.svg.addEventListener('mouseleave',e => this._onMU(e));
+    this.svg.addEventListener('wheel',     e => this._onWheel(e), {passive:false});
+    this.svg.addEventListener('dblclick',  e => this._onDbl(e));
+    this.svg.addEventListener('contextmenu',e=>this._onCtx(e));
+    // touch support
+    this.svg.addEventListener('touchstart', e => this._onTouch(e,'start'), {passive:false});
+    this.svg.addEventListener('touchmove',  e => this._onTouch(e,'move'),  {passive:false});
+    this.svg.addEventListener('touchend',   e => this._onMU(e));
+    window.addEventListener('keydown', e => {
+      if (e.key==='Escape') { this.cancelConnect(); closeCtxMenu(); }
+      const active = document.activeElement;
+      if (e.key==='Delete' && this.selectedId && active===document.body || (active&&active.tagName==='SVG')) {
+        this._deleteEntity(this.selectedId);
+      }
+    });
+  }
+
+  _onMD(e) {
+    if (e.button!==0) return;
+    e.preventDefault();
+    const vp = this.clientToVP(e.clientX, e.clientY);
+    const hit = this.hitEntity(vp.x, vp.y);
+    closeCtxMenu();
+
+    if (this.connectMode.active) {
+      if (hit) {
+        if (!this.connectMode.fromId) {
+          this.connectMode.fromId = hit;
+          this.render();
+        } else if (hit!==this.connectMode.fromId) {
+          this._openRelModal(this.connectMode.fromId, hit);
+        }
+      }
+      return;
+    }
+
+    if (hit) {
+      this.selectedId = hit;
+      const ent = this.entities.find(e=>e.id===hit);
+      // Bring to front
+      this.entities.splice(this.entities.indexOf(ent),1);
+      this.entities.push(ent);
+      this.dragState = { id:hit, ex:ent.x, ey:ent.y, mx:vp.x, my:vp.y };
+      this.svg.style.cursor = 'grabbing';
+    } else {
+      this.selectedId = null;
+      this.panState = { sx:e.clientX, sy:e.clientY, vx:this.vp.x, vy:this.vp.y };
+      this.svg.style.cursor = 'grabbing';
+    }
+    this.render();
+  }
+
+  _onMM(e) {
+    if (this.dragState) {
+      const vp = this.clientToVP(e.clientX, e.clientY);
+      const ent = this.entities.find(en=>en.id===this.dragState.id);
+      if (ent) { ent.x = this.dragState.ex + (vp.x - this.dragState.mx); ent.y = this.dragState.ey + (vp.y - this.dragState.my); }
+      this.render();
+    } else if (this.panState) {
+      this.vp.x = this.panState.vx + (e.clientX - this.panState.sx);
+      this.vp.y = this.panState.vy + (e.clientY - this.panState.sy);
+      this._applyVP();
+    }
+  }
+
+  _onMU(e) {
+    if (this.dragState) { this.saveState(); this.dragState=null; }
+    this.panState = null;
+    if (!this.connectMode.active) this.svg.style.cursor = '';
+    else this.svg.style.cursor = 'crosshair';
+  }
+
+  _onWheel(e) {
+    e.preventDefault();
+    const r = this.svg.getBoundingClientRect();
+    const cx = e.clientX - r.left, cy = e.clientY - r.top;
+    const factor = e.deltaY > 0 ? 0.88 : 1.12;
+    const newScale = Math.max(0.15, Math.min(4, this.vp.scale * factor));
+    const ratio = newScale / this.vp.scale;
+    this.vp.x = cx - (cx - this.vp.x) * ratio;
+    this.vp.y = cy - (cy - this.vp.y) * ratio;
+    this.vp.scale = newScale;
+    this._applyVP();
+    this._updateZoomLabel();
+  }
+
+  _onDbl(e) {
+    const vp = this.clientToVP(e.clientX, e.clientY);
+    const hit = this.hitEntity(vp.x, vp.y);
+    if (hit) { this._editId=hit; this._openEditModal(hit); }
+  }
+
+  _onCtx(e) {
+    e.preventDefault();
+    const vp = this.clientToVP(e.clientX, e.clientY);
+    const hit = this.hitEntity(vp.x, vp.y);
+    if (hit) {
+      this.selectedId = hit;
+      window._ctxEngine = this;
+      showCtxMenu(e.clientX, e.clientY);
+      this.render();
+    }
+  }
+
+  _onTouch(e, phase) {
+    if (e.touches.length===1) {
+      const t = e.touches[0];
+      if (phase==='start') this._onMD({ button:0, clientX:t.clientX, clientY:t.clientY, preventDefault:()=>e.preventDefault() });
+      else this._onMM({ clientX:t.clientX, clientY:t.clientY });
+    }
+  }
+
+  // ── CONNECT MODE ──────────────────────────────
+  startConnect() {
+    this.connectMode = { active:true, fromId:null };
+    document.getElementById(`${this.type}-connect-banner`).style.display = 'flex';
+    this.svg.style.cursor = 'crosshair';
+  }
+
+  cancelConnect() {
+    this.connectMode = { active:false, fromId:null };
+    const b = document.getElementById(`${this.type}-connect-banner`);
+    if (b) b.style.display = 'none';
+    this.svg.style.cursor = '';
+    this.render();
+  }
+
+  _openRelModal(fromId, toId) {
+    this._relPending = { fromId, toId };
+    document.getElementById('rel-from').value = fromId;
+    document.getElementById('rel-to').value = toId;
+    document.getElementById('rel-label').value = '';
+    document.getElementById('rel-card').value = '1:N';
+    document.getElementById('rel-modal').classList.add('open');
+    setTimeout(()=>document.getElementById('rel-label').focus(), 100);
+  }
+
+  confirmRel(label, card) {
+    if (!this._relPending) return;
+    const {fromId,toId} = this._relPending;
+    this.rels.push({ id:'r_'+Date.now(), from:fromId, to:toId, label, card });
+    this._relPending = null;
+    this.cancelConnect();
+    this.saveState();
+    this.render();
+  }
+
+  // ── EDIT ──────────────────────────────
+  _openEditModal(id) {
+    const ent = this.entities.find(e=>e.id===id);
+    if (!ent) return;
+    document.getElementById('edit-entity-name').value = ent.name;
+    document.getElementById('edit-entity-desc').value = ent.desc||'';
+    document.getElementById('edit-entity-cat').value  = ent.category||'core';
+    window._editEngine = this;
+    document.getElementById('edit-modal').classList.add('open');
+    setTimeout(()=>document.getElementById('edit-entity-name').focus(), 80);
+  }
+
+  confirmEdit(name, desc, cat) {
+    const ent = this.entities.find(e=>e.id===this._editId);
+    if (!ent) return;
+    ent.name = name || ent.name;
+    ent.desc = desc;
+    ent.category = cat;
+    this.saveState();
+    this.render();
+    this._editId = null;
+  }
+
+  // ── DELETE ──────────────────────────────
+  _deleteEntity(id) {
+    if (!id || !confirm('Delete this entity and all its relationships?')) return;
+    this.entities = this.entities.filter(e=>e.id!==id);
+    this.rels = this.rels.filter(r=>r.from!==id&&r.to!==id);
+    if (this.selectedId===id) this.selectedId=null;
+    this._editId = null;
+    this.saveState();
+    this.render();
+  }
+
+  // ── ADD ENTITY ──────────────────────────────
+  addEntity() {
+    const name = prompt('Entity name (e.g. CUSTOMER):');
+    if (!name||!name.trim()) return;
+    const id = 'E_'+Date.now();
+    const r = this.svg.getBoundingClientRect();
+    const cx = (r.width/2 - this.vp.x) / this.vp.scale - (this.type==='cdm'?CDM_NODE_W:LDM_NODE_W)/2;
+    const cy = (r.height/2 - this.vp.y) / this.vp.scale - (this.type==='cdm'?CDM_NODE_H:40)/2;
+    const ent = { id, name:name.trim().toUpperCase(), desc:'', category:'core', x:cx, y:cy };
+    if (this.type==='ldm') ent.attrs = [{name:'id',type:'INT',key:'PK'}];
+    this.entities.push(ent);
+    this.selectedId = id;
+    this.saveState();
+    this.render();
+  }
+
+  // ── ZOOM ──────────────────────────────
+  zoom(factor) {
+    const r = this.svg.getBoundingClientRect();
+    const cx = r.width/2, cy = r.height/2;
+    const newScale = Math.max(0.15, Math.min(4, this.vp.scale * factor));
+    const ratio = newScale / this.vp.scale;
+    this.vp.x = cx - (cx - this.vp.x) * ratio;
+    this.vp.y = cy - (cy - this.vp.y) * ratio;
+    this.vp.scale = newScale;
+    this._applyVP();
+    this._updateZoomLabel();
+  }
+
+  fitView() {
+    if (!this.entities.length) return;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for (const e of this.entities) {
+      minX=Math.min(minX,e.x); minY=Math.min(minY,e.y);
+      maxX=Math.max(maxX,e.x+this.nodeW(e));
+      maxY=Math.max(maxY,e.y+this.nodeH(e));
+    }
+    const r = this.svg.getBoundingClientRect();
+    const pad = 40;
+    const scaleX = (r.width-pad*2)/(maxX-minX);
+    const scaleY = (r.height-pad*2)/(maxY-minY);
+    const s = Math.max(0.15, Math.min(3, Math.min(scaleX,scaleY)));
+    this.vp.scale = s;
+    this.vp.x = pad - minX*s;
+    this.vp.y = pad - minY*s;
+    this._applyVP();
+    this._updateZoomLabel();
+  }
+
+  // ── SAVE / LOAD ──────────────────────────────
+  saveState(notify=false) {
+    try {
+      localStorage.setItem(`dps_v3_${this.type}`, JSON.stringify({ entities:this.entities, rels:this.rels, vp:this.vp }));
+    } catch(e) {}
+    if (notify) {
+      const el = document.getElementById(`${this.type}-save-status`);
+      if (el) {
+        el.textContent='✓ Saved'; el.className='badge b-g';
+        setTimeout(()=>{ el.textContent='Auto-saved'; el.className='badge b-t'; },2000);
+      }
+    }
+  }
+
+  loadState() {
+    try {
+      const s = localStorage.getItem(`dps_v3_${this.type}`);
+      if (s) {
+        const d = JSON.parse(s);
+        // Guard: if LDM entities are missing attrs, fall back to defaults
+        if (this.type==='ldm') {
+          const hasAttrs = d.entities && d.entities.every(e => Array.isArray(e.attrs) && e.attrs.length > 0);
+          if (!hasAttrs) { this._loadDefaults(); return; }
+        }
+        this.entities = d.entities;
+        this.rels = d.rels || [];
+        if (d.vp) this.vp = d.vp;
+        return;
+      }
+    } catch(e) {}
+    this._loadDefaults();
+  }
+
+  _loadDefaults() {
+    const def = this.type==='cdm' ? CDM_DEFAULTS : LDM_DEFAULTS;
+    this.entities = deepClone(def.entities);
+    this.rels = deepClone(def.rels);
+  }
+
+  resetLayout() {
+    if (!confirm('Reset to default layout? All your edits will be cleared.')) return;
+    localStorage.removeItem(`dps_v3_${this.type}`);
+    this._loadDefaults();
+    this.selectedId=null; this.vp={x:30,y:30,scale:this.type==='ldm'?0.7:1};
+    this.render(); this._updateZoomLabel();
+  }
+
+  exportSVG() {
+    // Clone SVG, inline styles from CSS variables
+    const clone = this.svg.cloneNode(true);
+    const isDark = document.documentElement.getAttribute('data-theme')!=='light';
+    const styles = `<style>
+      .edge-path{stroke:${isDark?'rgba(100,130,180,0.45)':'rgba(70,100,160,0.4)'};fill:none;stroke-width:1.5}
+      .node-bg{fill:${isDark?'#0E1826':'#fff'};stroke:${isDark?'rgba(255,255,255,0.09)':'rgba(0,0,0,0.1)'};stroke-width:1}
+      .node-shadow{fill:${isDark?'rgba(0,0,0,0.55)':'rgba(0,0,40,0.10)'};opacity:.6;stroke:none}
+      .header-divider{stroke:${isDark?'rgba(255,255,255,0.09)':'rgba(0,0,0,0.1)'};stroke-width:.8}
+      .attr-divider{stroke:${isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)'};stroke-width:.5}
+      .edge-label-bg{fill:${isDark?'rgba(15,22,35,0.9)':'rgba(240,244,252,0.95)'}}
+      .edge-label-text{fill:${isDark?'#4E5A6E':'#9AA5B4'};font-size:10px;font-family:sans-serif}
+      text{font-family:sans-serif}
+      polygon{fill:${isDark?'rgba(100,130,180,0.45)':'rgba(70,100,160,0.4)'}}
+    </style>`;
+    clone.insertAdjacentHTML('afterbegin', styles);
+    clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    const blob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>'+clone.outerHTML],{type:'image/svg+xml'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=`cvs-${this.type}-diagram.svg`; a.click(); URL.revokeObjectURL(a.href);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  GLOBAL MODAL HANDLERS
+// ══════════════════════════════════════════════════
+function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
+function confirmEditModal() {
+  const name = document.getElementById('edit-entity-name').value.trim();
+  const desc = document.getElementById('edit-entity-desc').value.trim();
+  const cat  = document.getElementById('edit-entity-cat').value;
+  if (window._editEngine) window._editEngine.confirmEdit(name, desc, cat);
+  closeEditModal();
+}
+function deleteCurrentEntity() {
+  if (!window._editEngine) return;
+  const id = window._editEngine._editId;
+  closeEditModal();
+  if (id) window._editEngine._deleteEntity(id);
+}
+function closeRelModal() {
+  document.getElementById('rel-modal').classList.remove('open');
+  if (window._relEngine) window._relEngine.cancelConnect();
+}
+function confirmRelModal() {
+  const label = document.getElementById('rel-label').value.trim();
+  const card  = document.getElementById('rel-card').value;
+  const engine = window.cdmEngine?.connectMode?.active ? window.cdmEngine : window.ldmEngine;
+  if (engine) engine.confirmRel(label, card);
+  document.getElementById('rel-modal').classList.remove('open');
+}
+// Close modals on overlay click
+document.getElementById('edit-modal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeEditModal(); });
+document.getElementById('rel-modal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeRelModal(); });
+// Enter key submits modals
+document.getElementById('edit-entity-name').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmEditModal(); });
+document.getElementById('rel-label').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmRelModal(); });
+
+// ══════════════════════════════════════════════════
+//  CONTEXT MENU
+// ══════════════════════════════════════════════════
+function showCtxMenu(x, y) {
+  const m = document.getElementById('ctx-menu');
+  m.style.left = Math.min(x, window.innerWidth-180)+'px';
+  m.style.top  = Math.min(y, window.innerHeight-120)+'px';
+  m.classList.add('open');
+}
+function closeCtxMenu() { document.getElementById('ctx-menu').classList.remove('open'); }
+function ctxAction(action) {
+  closeCtxMenu();
+  const eng = window._ctxEngine;
+  if (!eng) return;
+  const id = eng.selectedId;
+  if (action==='edit') { eng._editId=id; eng._openEditModal(id); }
+  else if (action==='connect') { eng.startConnect(); eng.connectMode.fromId=id; eng.render(); }
+  else if (action==='delete') { eng._deleteEntity(id); }
+}
+document.addEventListener('click', e=>{ if(!e.target.closest('#ctx-menu')) closeCtxMenu(); });
+
+// ══════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════
+const TITLES = { overview:'System Overview',cdm:'Conceptual Data Model',ldm:'Logical Data Model',forecast:'Forecast Monitor',sources:'Data Sources Registry',alerts:'Early Warning Alerts',instructions:'Getting Started' };
+function gotoTab(id, el) {
+  document.querySelectorAll('.tab-pane').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('page-title').textContent = TITLES[id]||id;
+  if (id==='cdm' && window.cdmEngine) { setTimeout(()=>{ window.cdmEngine._applyVP(); window.cdmEngine.render(); },60); }
+  if (id==='ldm' && window.ldmEngine) { setTimeout(()=>{ window.ldmEngine._applyVP(); window.ldmEngine.render(); },60); }
+}
+
+// ══════════════════════════════════════════════════
+//  THEME TOGGLE
+// ══════════════════════════════════════════════════
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme')!=='light';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('theme-btn').textContent = isDark ? '🌙' : '☀️';
+  // Update chart colors
+  updateChartTheme(isDark ? 'light' : 'dark');
+  // Re-render diagrams to pick up new CSS vars
+  if (window.cdmEngine) window.cdmEngine.render();
+  if (window.ldmEngine) window.ldmEngine.render();
+}
+
+// ══════════════════════════════════════════════════
+//  CHARTS
+// ══════════════════════════════════════════════════
+let allCharts = {};
+function chartDefaults(theme='dark') {
+  const isDark = theme==='dark';
+  const gridCol = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+  const tickCol  = isDark ? '#4E5A6E' : '#9AA5B4';
+  return {
+    plugins:{ legend:{ display:false } },
+    scales:{
+      x:{ grid:{ color:gridCol, lineWidth:.5 }, ticks:{ color:tickCol, font:{size:10} } },
+      y:{ grid:{ color:gridCol, lineWidth:.5 }, ticks:{ color:tickCol, font:{size:10} } }
+    }
+  };
+}
+
+function updateChartTheme(theme) {
+  const isDark = theme==='dark';
+  const tc = isDark ? '#8892A4' : '#4A5870';
+  const gc = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+  Object.values(allCharts).forEach(ch => {
+    if (!ch) return;
+    if (ch.options.scales?.x) { ch.options.scales.x.ticks.color=tc; ch.options.scales.x.grid.color=gc; }
+    if (ch.options.scales?.y) { ch.options.scales.y.ticks.color=tc; ch.options.scales.y.grid.color=gc; }
+    if (ch.options.plugins?.legend?.labels) ch.options.plugins.legend.labels.color=tc;
+    ch.update();
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const CD = chartDefaults('dark');
+
+  allCharts.accuracy = new Chart(document.getElementById('accuracyChart'), {
+    type:'line',
+    data:{
+      labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'],
+      datasets:[
+        {label:'With Proxy Model',data:[95.1,95.8,96.4,96.2,97.1,97.3,97.0,97.8,97.9,98.0,98.1,98.2],borderColor:'#22D3EE',backgroundColor:'rgba(34,211,238,0.07)',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#22D3EE',borderWidth:2},
+        {label:'Baseline (historical only)',data:[82.1,81.5,80.8,82.0,83.1,83.4,83.0,83.6,84.1,84.0,84.5,85.1],borderColor:'#374151',borderDash:[4,3],tension:.4,pointRadius:0,borderWidth:1.5},
+      ]
+    },
+    options:{...CD,plugins:{legend:{display:true,labels:{color:'#8892A4',font:{size:10},boxWidth:10,padding:10}}},scales:{x:CD.scales.x,y:{...CD.scales.y,min:78,max:100,ticks:{...CD.scales.y.ticks,callback:v=>v+'%'}}}}
+  });
+
+  allCharts.mix = new Chart(document.getElementById('mixChart'), {
+    type:'doughnut',
+    data:{
+      labels:['Real Estate (Zillow)','Infection Rate (JHU)','Employment (DoL)','Sentiment (GDELT)','Mobility (Descartes)'],
+      datasets:[{data:[34,22,18,12,14],backgroundColor:['#22D3EE','#34D399','#A78BFA','#FBBF24','#60A5FA'],borderColor:'transparent',borderWidth:2,hoverOffset:6}]
+    },
+    options:{plugins:{legend:{display:true,position:'bottom',labels:{color:'#8892A4',font:{size:10},boxWidth:9,padding:8}}},cutout:'68%'}
+  });
+
+  // Forecast chart
+  const FC_BASE={san:4200,msk:2100,vit:3800,ppe:1600,cln:3100};
+  function buildFC(sku){
+    const b=FC_BASE[sku]||3500;
+    const labels=['Jan','Feb','Mar','Apr','May','Jun'];
+    const actual=labels.map((_,i)=>Math.round(b+Math.sin(i/1.8)*b*.18+(Math.random()-.5)*b*.06));
+    const forecast=actual.map(v=>Math.round(v*(1+(Math.random()-.5)*.036)));
+    return{labels,actual,forecast};
+  }
+  const{labels:fl,actual:fa,forecast:ff}=buildFC('san');
+  allCharts.fc = new Chart(document.getElementById('fcChart'), {
+    type:'line',
+    data:{labels:fl,datasets:[
+      {label:'Forecast',data:ff,borderColor:'#22D3EE',backgroundColor:'rgba(34,211,238,0.07)',fill:true,tension:.4,borderWidth:2,pointRadius:4,pointBackgroundColor:'#22D3EE'},
+      {label:'Actual',data:fa,borderColor:'#34D399',borderDash:[5,3],tension:.4,borderWidth:1.5,pointRadius:3,pointBackgroundColor:'#34D399'},
+    ]},
+    options:{...CD,plugins:{legend:{display:true,labels:{color:'#8892A4',font:{size:11},boxWidth:10,padding:10}},tooltip:{mode:'index',intersect:false}},scales:{x:CD.scales.x,y:{...CD.scales.y,ticks:{...CD.scales.y.ticks,callback:v=>v.toLocaleString()}}}}
+  });
+
+  window.refreshForecast = function() {
+    const sku=document.getElementById('sel-sku').value;
+    const skuT=document.getElementById('sel-sku').options[document.getElementById('sel-sku').selectedIndex].text;
+    const stT=document.getElementById('sel-store').options[document.getElementById('sel-store').selectedIndex].text;
+    const per=document.getElementById('sel-period').options[document.getElementById('sel-period').selectedIndex].text;
+    document.getElementById('fc-label').textContent=`${skuT} · ${stT} · ${per}`;
+    const{labels,actual,forecast}=buildFC(sku);
+    allCharts.fc.data.labels=labels;
+    allCharts.fc.data.datasets[0].data=forecast;
+    allCharts.fc.data.datasets[1].data=actual;
+    allCharts.fc.update();
+  };
+
+  allCharts.contrib = new Chart(document.getElementById('contribChart'), {
+    type:'bar',
+    data:{labels:['Real Estate','Infection Rate','Employment','Sentiment','Mobility'],datasets:[{label:'Weight %',data:[34,22,18,12,14],backgroundColor:['rgba(34,211,238,.7)','rgba(52,211,153,.7)','rgba(167,139,250,.7)','rgba(251,191,36,.7)','rgba(96,165,250,.7)'],borderRadius:4,barPercentage:.55}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...CD.scales.x,max:40,ticks:{...CD.scales.x.ticks,callback:v=>v+'%'}},y:{...CD.scales.y,grid:{display:false}}}}
+  });
+
+  allCharts.alertHist = new Chart(document.getElementById('alertHistChart'), {
+    type:'bar',
+    data:{
+      labels:Array.from({length:30},(_,i)=>'W'+(i+1)),
+      datasets:[
+        {label:'High',data:[2,3,1,4,2,3,5,4,3,2,1,2,3,4,2,1,3,2,4,3,2,1,2,3,2,1,2,3,2,3],backgroundColor:'rgba(248,113,113,.7)',borderRadius:2},
+        {label:'Medium',data:[3,2,4,3,5,4,3,2,4,3,5,3,4,3,5,4,3,5,4,3,4,3,5,4,3,4,3,4,3,4],backgroundColor:'rgba(251,191,36,.5)',borderRadius:2},
+      ]
+    },
+    options:{...CD,plugins:{legend:{display:true,labels:{color:'#8892A4',font:{size:10},boxWidth:10,padding:10}},tooltip:{mode:'index'}},scales:{x:{...CD.scales.x,stacked:true},y:{...CD.scales.y,stacked:true}}}
+  });
+
+  // ── DATA SOURCES ──────────────────────────────
+  const SRCS=[
+    {nm:'Zillow',init:'Z',col:'#0062FF',type:'Real Estate Signal',status:'active',rf:'2h ago',q:.96,corr:.847,note:'Key proxy: home price strength correlates with consumer spending in store catchment zones. Strongest signal during COVID disruption.',metrics:[['Correlation (r)','0.847'],['Coverage','9,847 ZIPs'],['Refresh','Daily'],['Latency','1.4 s']]},
+    {nm:'Johns Hopkins / NYT',init:'JH',col:'#003087',type:'Infection Rate Signal',status:'active',rf:'6h ago',q:.91,corr:.763,note:'County case counts, positivity rates. Powers pandemic-phase model switching between normal-demand and panic-buying modes.',metrics:[['Correlation (r)','0.763'],['Coverage','3,143 counties'],['Refresh','Daily'],['Latency','2.1 s']]},
+    {nm:'Dept. of Labor',init:'DL',col:'#1B4F72',type:'Employment Signal',status:'active',rf:'1d ago',q:.88,corr:.712,note:'Weekly unemployment claims and employment rate by state. Primary proxy for consumer purchasing power over 4–8 week horizon.',metrics:[['Correlation (r)','0.712'],['Coverage','50 states + DC'],['Refresh','Weekly'],['Latency','0.8 s']]},
+    {nm:'GDELT Project',init:'GD',col:'#6D28D9',type:'News Sentiment Signal',status:'degraded',rf:'15m ago',q:.74,corr:.631,note:'⚠ DEGRADED — Feed latency at 2.4s (threshold: 2.0s). Quality score dropped 8% in past 12 hours.',metrics:[['Correlation (r)','0.631'],['Coverage','200+ regions'],['Refresh','Real-time'],['Latency','⚠ 2.4 s']]},
+    {nm:'Descartes Labs',init:'DC',col:'#0891B2',type:'Mobility Signal',status:'active',rf:'3h ago',q:.93,corr:.789,note:'Satellite-derived mobility and foot traffic analytics. Critical for shelter-in-place scenario detection and store-level visit prediction.',metrics:[['Correlation (r)','0.789'],['Coverage','10,200 ZIPs'],['Refresh','Every 3h'],['Latency','1.9 s']]},
+  ];
+  document.getElementById('src-grid').innerHTML=SRCS.map(s=>`
+    <div class="card${s.status==='degraded'?' ':''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="src-logo" style="background:${s.col}20;color:${s.col}">${s.init}</div>
+          <div><div style="font-weight:600;font-size:13px;color:var(--text-1)">${s.nm}</div><div style="font-size:10px;color:var(--text-3)">${s.type}</div></div>
+        </div>
+        <span class="badge ${s.status==='active'?'b-g':'b-a'}">${s.status==='active'?'● Active':'⚠ Degraded'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-2);line-height:1.6;padding:8px 10px;background:var(--bg-raised);border-radius:6px;margin-bottom:10px">${s.note}</div>
+      <div class="card-title" style="margin-bottom:3px">Quality Score — ${Math.round(s.q*100)}%</div>
+      <div class="qbar"><div class="qfill ${s.q>=.85?'qh':s.q>=.70?'qm':'ql'}" style="width:${s.q*100}%"></div></div>
+      <div style="font-size:10px;color:var(--text-3);margin-bottom:10px">Last refreshed ${s.rf}</div>
+      ${s.metrics.map(m=>`<div class="mrow"><span class="ml">${m[0]}</span><span class="mv">${m[1]}</span></div>`).join('')}
+    </div>`).join('');
+
+  // ── INIT DIAGRAMS ──────────────────────────────
+  window.cdmEngine = new DiagramEngine('cdm-svg','cdm-vp','cdm',CDM_DEFAULTS,1.0);
+  window.ldmEngine = new DiagramEngine('ldm-svg','ldm-vp','ldm',LDM_DEFAULTS,0.7);
+  window.ldmEngine.vp = { x:30, y:20, scale:0.68 };
+  window.ldmEngine._applyVP();
+  window.ldmEngine._updateZoomLabel();
+});
+</script>
+</body>
+</html>
